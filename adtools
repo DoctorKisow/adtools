@@ -1,0 +1,1600 @@
+#!/bin/bash
+#
+# A script to manage SSO (Single Sign-On) for Linux workstations and servers.
+# Version: 3.00.01
+# Copyright (c) 2014-2019 Dr. Matthew R. Kisow <matthew.kisow@nsabp.org>
+#
+# TODO:   1. Function "check_installed" better checking required to eliminate
+#             the need for an installation flag file.
+#          2. Function "write_configuration" set flags when checking changes to
+#             /etc/pam.d files and write information out to post install log
+#             file.
+#          3. Function "interactive_config" test entered data for "basic" error
+#             checking.
+#          4. Function "show_config" cleanup output formatting.
+#
+# License (GPL v3.0)
+# ------------------
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# Variable Definition:
+#   g) (g_<variable>) - Global declaration, variables defined for use throughout
+#                       the scripts execution.
+#   l) (l_<variable>) - Local declaration, variables defined for use in
+#                       function(s), local variables cannot be accessed globally.
+#   v) (v_<variable>) - Variable declaration, variables defined in the
+#                       configuration file and are used globally throughout the
+#                       scripts execution.
+
+## Set how the script will behave when certain conditions are encountered.
+# Enable exiting immediately if a command exits with a non-zero status.
+set -e
+
+# Enable erroring on un-bound (undefined) variables.
+set -u
+
+# Enable filename patterns that match no files to expand to a null string,
+# rather than themselves.
+shopt -s nullglob
+
+# ************************ global variable definitions ************************
+# *param:	string	$g_PROGNAME			String value used to hold the name of the script.
+# *param:	string	$g_CONFFILE			String value used to hold the name of the configuration file.
+# *param:	string	$g_LOGFILE			String value used to hold the name of the script log file.
+# *param:	string	$g_VERSION			String value used to hold the version number of the script.
+# *param:	string	$g_PROGRAM_NAME		String value used to hold the proper name of the script.
+# *param:	string	$g_PROGRAM_DESCRIPTION	String value used to hold the summary description of the script.
+# *param:	string	$g_COPYRIGHT_TEXT		String value used to hold the copyright information.
+# *param:	string	$g_AUTHOR_TEXT			String value used to hold the aurhor(s) of the script.
+g_PROGNAME="$(basename "${0}")"
+g_CONFFILE="${g_PROGNAME}.conf"
+g_LOGFILE="${g_PROGNAME}.log"
+g_VERSION="3.00.01"
+g_PROGRAM_NAME="Active Directory Install"
+g_PROGRAM_DESCRIPTION="A script to manage SSO (Single Sign-On) for Linux workstations and servers."
+g_COPYRIGHT_TEXT="Copyright (c) 2014-2019"
+g_AUTHOR_TEXT="Dr. Matthew R. Kisow"
+
+# *param:	string	$g_RED_TEXT		String value used to hold red color output displayed to the screen during script execution.
+# *param:	string	$g_GREEN_TEXT		String value used to hold green color output displayed to the screen during script execution.
+# *param:	string	$g_YELLOW_TEXT		String value used to hold yellow color output displayed to the screen during script execution.
+# *param:	string	$g_BLUE_TEXT		String value used to hold blue color output displayed to the screen during script execution.
+# *param:	string	$g_MAGENTA_TEXT	String value used to hold magenta color output displayed to the screen during script execution.
+# *param:	string	$g_CYAN_TEXT		String value used to hold cyan color output displayed to the screen during script execution.
+# *param:	string	$g_WHITE_TEXT		String value used to hold white color output displayed to the screen during script execution.
+# *param:	string	$g_NORMAL_TEXT		String value used to hold normal color output displayed to the screen during script execution.
+# *param:	string	$g_RESET_TEXT		String value used to reset color output displayed to the screen during script execution.
+# *param:	string	$g_ALERT_TEXT		String value used to output an audible alert during script execution.
+g_RED_TEXT="" g_GREEN_TEXT="" g_YELLOW_TEXT="" g_BLUE_TEXT="" g_MAGENTA_TEXT="" g_CYAN_TEXT="" g_WHITE_TEXT="" g_NORMAL_TEXT="" g_RESET_ATTS=""  g_ALERT_TEXT=""
+if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
+	g_RED_TEXT="$(tput setaf 1)$(tput bold)"
+	g_GREEN_TEXT="$(tput setaf 2)$(tput bold)"
+	g_YELLOW_TEXT="$(tput setaf 3)$(tput bold)"
+	g_BLUE_TEXT="$(tput setaf 4)$(tput bold)"
+	g_MAGENTA_TEXT="$(tput setaf 5)$(tput bold)"
+	g_CYAN_TEXT="$(tput setaf 6)$(tput bold)"
+	g_WHITE_TEXT="$(tput setaf 7)$(tput bold)"
+	g_NORMAL_TEXT="$(tput setaf 9)$(tput bold)"
+	g_RESET_ATTS="$(tput sgr0)"
+	g_ALERT_TEXT="$(tput bel)"
+fi
+
+# *param:	string	$g_PREFIXSTRING	String value used to indicate what is appended output at the beginning of a displayed line during script execution.
+g_PREFIXSTRING=" *  "
+
+# *param:	string	$g_SHOWPREFIX		String value used to indicate normal script execution.
+g_SHOWPREFIX="${g_GREEN_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}"
+
+# *param:	string	$g_SCRIPT_PATH		String value used to hold the execution path of the script.
+g_SCRIPT_PATH="`dirname \"$0\"`"
+g_SCRIPT_PATH="`( cd \"$g_SCRIPT_PATH\" && pwd )`"
+
+# *param:	boolean	$g_ARG_HELP		Boolean values used to indicate the help switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_INSTALL		Boolean values used to indicate the install switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_INTR_CONF	Boolean values used to indicate the interactive configuration switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_RESTART		Boolean values used to indicate the restart daemons switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_SHOWCONF	Boolean values used to indicate the show configuration switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_VERSION		Boolean values used to indicate the version switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_WORKSTATION	Boolean values used to indicate workstation switch was passed from the command line during script execution.
+declare -i g_ARG_HELP=0
+declare -i g_ARG_INSTALL=0
+declare -i g_ARG_INTR_CONF=0
+declare -i g_ARG_RESTART=0
+declare -i g_ARG_SHOWCONF=0
+declare -i g_ARG_VERSION=0
+declare -i g_ARG_WORKSTATION=0
+
+# ****************************** default values *******************************
+# *param:	boolean	$v_DEBUG			Boolean value used to enable the bash debug features 0 is false, 1 is true.
+declare -i g_DEBUG=0
+
+# *param:	string	$g_INSTALL_FLAG	String value used to hold the filename of the flag file.  This file is used to indicate if the script was previously run on the target workstation or server.
+g_INSTALL_FLAG="${g_SCRIPT_PATH}/${g_PROGNAME}.flag"
+
+# ****************************** script functions *****************************
+###
+# Cleanup the shell enviornment after an error.
+#
+# Usage:
+#   cleanup_and_exit_with_code $1
+#
+# *param:	boolean	$1	The passed exit code 1 (error) or 0 (normal).
+#
+function cleanup_and_exit_with_code ()
+{
+	# *param:	boolean	$l_BOOL	Trap value used to test passed exit code.
+	l_BOOL='^[0-1]+$'
+
+	if ! [[ $1 =~ $l_BOOL ]]; then
+		error "Function: cleanup_and_exit_with_code was passed a value that is out of bounds."
+	fi
+
+	# If output was redirected to the logfile during an interactive session,
+	# repoint it to the console.
+	exec &>$(tty)
+
+	# Error trapping is turned off because we want to handle errors.
+	set +e
+	trap - EXIT
+
+	exit $1
+}
+
+###
+# Informational Messages.
+#
+# This function will display the informational message passed to it.
+#
+# Usage:
+#   info $1
+#
+# *param:	string	$1	The passed informational message.
+#
+function info ()
+{
+	echo -e "${g_CYAN_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}INFO:      ${1}" >&2
+}
+
+###
+# Warning Messages.
+#
+# This function will display the warning message passed to it.
+#
+# Usage:
+#   warning $1
+#
+# *param:	string	$1	The passed warning message.
+#
+function warning ()
+{
+	echo -e "${g_YELLOW_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}WARNING:   ${1}" >&2
+}
+
+###
+# Error Messages.
+#
+# This function will display the error message passed to it and exit the script
+# with an exit code of 1.
+#
+# Usage:
+#   error $1
+#
+# *param:	string	$1	The passed error message.
+#
+function error ()
+{
+	echo
+	echo -e "${g_RED_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}ERROR: ${1} - exiting" >&2
+	cleanup_and_exit_with_code 1
+}
+
+###
+# Cleanup and exit the script when an error condition is encountered.
+#
+# This function used to set how we want the script to handle any error
+# conditions it encounters and what we want to do once those error conditions
+# are encountered.
+#
+# *param:	integer	$trap	A signal name with or without the SIG prefix.
+#
+function trap_cleanup ()
+{
+	if ((g_DEBUG==0)); then
+		trap - SIGHUP SIGQUIT SIGINT SIGTERM SIGKILL EXIT
+		error "Caught signal"
+	fi
+}
+trap trap_cleanup SIGHUP SIGQUIT SIGINT SIGTERM SIGKILL EXIT
+
+###
+# Test for (y)es or (n)o input from the keyboard.
+#
+# This function used to test for a "y" or "n" input from the keyboard.
+#
+# Usage:
+#    test_yn $1
+#
+# *param:	string	$1	The passed question to test against.
+# @return	boolean		Returns 0 for yes or true and 1 for no or false.
+#
+function test_yn ()
+{
+	# *param:	string	$l_REPLY	String value used to hold the response from the keyboard.
+	local l_REPLY=""
+
+	read -r -n 1 -p "${g_SHOWPREFIX}${1} (y/n)? ${g_ALERT_TEXT}" l_REPLY
+	echo
+	if [[ ${l_REPLY} =~ ^[Yy]$ ]]; then
+		# Return 0 for true.
+		return 0
+	else
+		# Return 1 for false.
+		return 1
+	fi
+}
+
+###
+# Test for carriage return from the keyboard.
+#
+# This function used to test for a carriage return (enter) from the keyboard.
+#
+# Usage:
+#   press_enter_to_continue
+#
+function press_enter_to_continue ()
+{
+	echo -n -e "${g_SHOWPREFIX}Press [ENTER] to continue. ${g_ALERT_TEXT}"
+	read -r PRESS_ENTER
+}
+
+###
+# Display the scripts usage.
+#
+# This function displayes the scripts usage and command line options.
+#
+# Usage:
+#   print_usage
+#
+function print_usage()
+{
+	cat <<-EOF
+	Usage: ${g_PROGNAME} [OPTIONS]
+	Options:
+	  -h, --help               show this help message and exit
+	  -i, --install            install and configure authentication services
+	  -I, --interactive-config interactively set the configuration file used to install
+	  -r, --restart-daemons    restart the authentication services
+	  -s, --show-config        display the configuration files
+	  -v, --version            display the version number of ${g_PROGNAME} and exit
+	  -w, --workstation        install authentication services on a workstation
+	EOF
+}
+
+###
+# Display the scripts help and usage information.
+#
+# This function displays the scripts name and description then calls the
+# print_usage function before exiting the script with an exit code of 0.
+#
+# Usage:
+#   print_help
+#
+function print_help ()
+{
+	printf "${g_PROGNAME} - ${g_PROGRAM_DESCRIPTION}\n"
+	print_usage
+	cleanup_and_exit_with_code 0
+}
+
+###
+# Display the scripts current version.
+#
+# This function displays the scripts current version.
+#
+# Usage:
+#   print_version
+#
+function print_version ()
+{
+	printf "%s\n" "${g_VERSION}"
+}
+
+###
+# Catch invalid command line options.
+#
+# This function is used to display the scripts usage information when an invalid
+# command line option is passed to the script.
+#
+# Usage:
+#   display_usage_message_and_bail_out
+#
+function display_usage_message_and_bail_out ()
+{
+	if [ ! -z "${1+x}" ]; then
+		printf "%s: %s\n" "${g_PROGNAME}" "${1}" >&2
+	fi
+
+	print_usage >&2
+	cleanup_and_exit_with_code 1
+}
+
+###
+# Process command line options.
+#
+# This function is used to set and validate the command line options that are
+# passed to the script.
+#
+# Usage:
+#   process_command_line_options ${@}
+#
+# *param:	array	${@}		An array of passed parameters from the command line.
+#
+function process_command_line_options ()
+{
+	# *param:	array	$l_TEMP	Array used to hold the list of command line arguements passed from the command line during script execution.
+	local -a l_TEMP
+
+	# *param:	boolean	$l_RC	Boolean value used to test if any command line arguements passed from the command line during script execution are invalid.
+	local -i l_RC
+
+	# Error trapping turned off, as we want to handle errors.
+	set +e
+		l_TEMP="$(getopt -o hiIrsvw --long help,install,interactive-config,restart-daemons,show-config,version,workstation -n "${g_PROGNAME}" -- "${@}")"
+		l_RC="${?}"
+	set -e
+
+	# Check if any invalid options were passed and display help.
+	if ((l_RC!=0)); then
+		display_usage_message_and_bail_out
+	fi
+	eval set -- "${l_TEMP}"
+
+	# Do not run the script without valid arguments being passed to it.
+	if  [[ "${1}" == "--" ]]; then
+		print_help
+	fi
+
+	# Extract options and their arguments into variables.
+	while true ; do
+		case "${1}" in
+		-h|--help) g_ARG_HELP=1 ; shift ;;
+		-i|--install) g_ARG_INSTALL=1 ; shift ;;
+		-I|--interactive-config) g_ARG_INTR_CONF=1 ; shift ;;
+		-r|--restart-daemons) g_ARG_RESTART=1 ; shift ;;
+		-s|--show-config) g_ARG_SHOWCONF=1 ; shift ;;
+		-v|--version) g_ARG_VERSION=1; shift ;;
+		-w|--workstation) g_ARG_WORKSTATION=1 ; shift ;;
+		--) shift ; break ;;
+		*) die "Internal Error!" ;;
+		esac
+	done
+
+	# If help is run with ANY other option exit.
+	if ((g_ARG_HELP==1)); then
+		if ((g_ARG_INSTALL==1 || g_ARG_INTR_CONF==1 || g_ARG_RESTART==1 || g_ARG_SHOWCONF==1 || g_ARG_VERSION==1 || g_ARG_WORKSTATION==1 )); then
+			error "  You cannot use the restart option with any other option!"
+		fi
+		print_help
+		cleanup_and_exit_with_code 0
+	fi
+
+	# If version is run with ANY other option exit.
+	if ((g_ARG_VERSION==1)); then
+		if ((g_ARG_HELP==1 || g_ARG_INSTALL==1 || g_ARG_INTR_CONF==1 || g_ARG_RESTART==1 || g_ARG_SHOWCONF==1 || g_ARG_WORKSTATION==1 )); then
+			error "  You cannot use the version option with any other option!"
+		fi
+		print_version
+		cleanup_and_exit_with_code 0
+	fi
+}
+
+###
+# Display script banner.
+#
+# This function is used to display the scripts name, description and copyright
+# information.
+#
+# Usage:
+#   banner
+#
+function banner ()
+{
+	clear
+	printf "${g_PROGNAME} - ${g_PROGRAM_DESCRIPTION}\n"
+	printf "${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}\n\n"
+}
+
+###
+# Create a default configuration file.
+#
+# This function is used to create a new default configuration file or source
+# an existing configuration file.
+#
+# Usage:
+#   configuration_file
+#
+function configuration_file()
+{
+	if [ -f "${g_SCRIPT_PATH}/${g_CONFFILE}" ]; then
+		info "Reading the scripts configuration file."
+
+		source "${g_SCRIPT_PATH}/${g_CONFFILE}"
+	else
+		info "Creating a default configuration file."
+
+		## Create a default configuration file.
+		cat <<-EOF > "${g_SCRIPT_PATH}/${g_CONFFILE}"
+		# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+		# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+		# (v_ADMIN_GROUP) - A string variable used to hold the Active Directory's
+		# Linux administrator group; the default value is Domain Admins.
+		v_ADMIN_GROUP="Domain Admins"
+
+		# (v_SERVER_OR_WORKSTATION_NAME) - A string variable used to hold the name
+		# of the target workstation or server NetBIOS name; the default value is
+		# empty.
+		v_SERVER_OR_WORKSTATION_NAME=""
+
+		# (v_NETWORK_INTERFACE) - A string variable used to hold the interface name
+		# of the primary Ethernet interface; default value is empty.
+		v_NETWORK_INTERFACE=""
+
+		# (v_IP_ADDRESS) - A string variable used to hold the IPv4 address of the
+		# primary Ethernet interface on the workstation or server; defult value is
+		# empty.
+		v_IP_ADDRESS=""
+
+		# (v_DOMAIN_NAME) - A string value used to hold the dotted notation form of the
+		# Active Directory domain; the default value is EXAMPLE.ORG.
+		v_DOMAIN_NAME="EXAMPLE.ORG"
+
+		# (v_SHORT_DOMAIN_NAME) - A string value used to hold the short domain name of
+		# the Active Directory domain; the default value is EXAMPLE.
+		v_SHORT_DOMAIN_NAME="EXAMPLE"
+
+		# (v_FQDN_AD_1) - A string variable used to hold the FQDN of the first domain
+		# controller; the default value is server1.example.org.
+		v_FQDN_AD_1="server1.example.org"
+
+		# (v_FQDN_IP_1) - A string variable used to hold the IPv4 address of the first
+		# domain controller; the default value is 0.0.0.0.
+		v_FQDN_IP_1="0.0.0.0"
+
+		# (v_FQDN_AD_2) - A string variable used to hold the FQDN of the second domain
+		# controller if available; the default value is empty.
+		v_FQDN_AD_2=""
+
+		# (v_FQDN_IP_2) - A string variable used to hold the IPv4 address of the second
+		# domain controller if available; the default value is empty.
+		v_FQDN_IP_2=""
+
+		# (v_TIME1) - A string variable used to hold the IPv4 address of the domain's
+		# NTP (Network Time Protocol) server; the default value is 0.0.0.0.
+		v_TIME1="0.0.0.0"
+
+		# (v_TIME2) - A string variable used to hold the IPv4 address of the domain's
+		# second NTP server or an outside NTP server; the default value is 129.6.15.28.
+		v_TIME2="129.6.15.28"
+
+		# (v_TIME3) - A string variable used to hold the IPv4 address of the domain's
+		# third NTP server or an outside NTP server; the default value is 129.6.15.29.
+		v_TIME3="129.6.15.29"
+
+		# (v_SUDO_GROUP) - A string variable used to hold the value of an Active
+		# Directory group for the Linux SUDO (Administrator) group; default value is
+		# empty.
+		v_SUDO_GROUP=""
+
+		# (v_SERVER_OR_WORKSTATION_ID_STRING) - A string value used to hold the Samba
+		# identification string; the default value is Ubuntu 14.04.5.
+		v_SERVER_OR_WORKSTATION_ID_STRING="Ubuntu 14.04.5"
+
+		# (v_LOCAL_ADMINISTRATOR) - A string value used to hold the name of the local
+		# administrator account setup during installation; the default value is
+		# empty.
+		v_LOCAL_ADMIN=""
+
+		# (v_LOCAL_ADMIN_PASS) - A string value used to hold the password for the
+		# local administrator account setup during installation; the default value
+		# is empty.
+		v_LOCAL_ADMIN_PASS=""
+
+		# (v_VALID_DOMAIN_USER) - A string value used to hold the username of a valid
+		# domain user for testing the configuration after the domain-join; the default
+		# value is empty.
+		v_VALID_DOMAIN_USER=""
+
+		# (v_DOM_USERNAME) - A string value used to hold the username of a valid
+		# domain administrator used to join the workstation or server to the
+		# domain; the default value is empty.
+		v_DOM_USERNAME=""
+
+		# (v_DOM_PASSWORD) - A string value used to hold the password for the
+		# domain administrators account ehich is used to join the workstation
+		# or server to the domain; the default value is empty.
+		v_DOM_PASSWORD=""
+
+		# *param:	string	$v_FSTABFILE		The name of the file where you are storing the filesystem table entry changes.
+		v_FSTABFILE=""
+		EOF
+
+		info "  A configuration file was created at ${g_SCRIPT_PATH}/${g_CONFFILE}."
+		info "  Manually update this file or run this script again using  ${g_PROGNAME} -I"
+		cleanup_and_exit_with_code 0
+	fi
+}
+
+###
+# Validate command line and configuration file options.
+#
+# This function used to validate the some of the more obvious configuration
+# file and command line and configuration file snafus.
+#
+# Usage:
+#   internal_consistency_option_checks
+#
+function internal_consistency_option_checks ()
+{
+	info "Internal consistency checks."
+
+	# **************************** am i being run as an admin ****************************
+	if [[ $USER != "root" ]]; then
+		error "  This script is not being run with elevated permissions."
+	fi
+
+	# **************************** command line options ****************************
+	# If internal configuration is run with ANY other option exit.
+	if ((g_ARG_INTR_CONF==1 )); then
+		if ((g_ARG_HELP==1 || g_ARG_INSTALL==1 || g_ARG_RESTART==1 || g_ARG_VERSION==1 || g_ARG_SHOWCONF==1 || g_ARG_WORKSTATION==1 )); then
+			error "  You cannot use the internal configuration option with any other option!"
+		fi
+	fi
+
+	# If restart is run with ANY other option exit.
+	if ((g_ARG_RESTART==1)); then
+		if ((g_ARG_HELP==1 || g_ARG_INSTALL==1 || g_ARG_INTR_CONF==1 || g_ARG_SHOWCONF==1 || g_ARG_VERSION==1 || g_ARG_WORKSTATION==1 )); then
+			error "  You cannot use the restart option with any other option!"
+		fi
+	fi
+
+	# If show configuration is run with ANY other option exit.
+	if ((g_ARG_SHOWCONF==1)); then
+		if ((g_ARG_HELP==1 || g_ARG_INSTALL==1 || g_ARG_RESTART==1 || g_ARG_INTR_CONF==1 || g_ARG_VERSION==1 || g_ARG_WORKSTATION==1 )); then
+			error "  You cannot use the show configuration option with any other option!"
+		fi
+	fi
+
+	# If workstation is run without install option exit.
+	if ((g_ARG_WORKSTATION==1)); then
+		if ((g_ARG_INSTALL!=1)); then
+			error "  The workstation option is an installation only option, it cannot be used with any other option!"
+		fi
+
+		if [ -e "${g_SCRIPT_PATH}/${g_FSTABFILE}" ]; then
+			error "  The ${g_SCRIPT_PATH}/${g_FSTABFILE} filesystem table file doesn't exist."
+		fi
+	fi
+
+	# **************************** configuration file options ****************************
+	if ((g_ARG_INTR_CONF==0)); then
+		# Warn on v_ADMIN_GROUP default setting.
+		if [[ "$v_ADMIN_GROUP" = "Domain Admins" ]]; then
+			warning "  The v_ADMIN_GROUP configuration option is set to default."
+		fi
+
+		# Exit on unset v_SERVER_OR_WORKSTATION_NAME.
+		if [ -z $v_SERVER_OR_WORKSTATION_NAME ]; then
+			error "  The workstation or server name configuration option cannot be empty."
+		fi
+
+		# Exit on unset v_NETWORK_INTERFACE.
+		if [ -z $v_NETWORK_INTERFACE ]; then
+			error "  The v_NETWORK_INTERFACE configuration option cannot be empty."
+		fi
+
+		# Warn on v_IP_ADDRESS default setting.
+		if [ -z $v_IP_ADDRESS ]; then
+			warning "  The v_IP_ADDRESS configuration option is set to empty."
+		fi
+
+		# Exit on default v_DOMAIN_NAME.
+		if [[ "$v_DOMAIN_NAME" = "EXAMPLE.ORG" ]]; then
+			error "  The v_DOMAIN_NAME configuration option is set to default."
+		fi
+
+		# Exit on default v_SHORT_DOMAIN_NAME.
+		if [[ "$v_SHORT_DOMAIN_NAME" = "EXAMPLE" ]]; then
+			error "  The v_SHORT_DOMAIN_NAME configuration option is set to default."
+		fi
+
+		# Exit on default v_FQDN_AD_1.
+		if [[ "$v_FQDN_AD_1" = "server1.example.org" ]]; then
+			error "  The v_FQDN_AD_1 configuration option is set to default."
+		fi
+
+		# Exit on default v_FQDN_IP_1.
+		if [[ "$v_FQDN_IP_1" = "0.0.0.0" ]]; then
+			error "  The v_FQDN_IP_1 configuration option is set to default."
+		fi
+
+		# Exit on default v_FQDN_AD_2.
+		if [[ "$v_FQDN_AD_2" = "server2.example.org" ]]; then
+			error "  The v_FQDN_AD_2 configuration option is set to default."
+		fi
+
+		# Exit on default v_FQDN_IP_2.
+		if [[ "$v_FQDN_IP_2" = "0.0.0.0" ]]; then
+			error "  The v_FQDN_IP_2 configuration option is set to default."
+		fi
+
+		# Exit on default v_TIME1.
+		if [[ "$v_TIME1" = "0.0.0.0" ]]; then
+			error "  The v_TIME1 configuration option is set to default."
+		fi
+
+		# Warn on v_TIME2 default setting.
+		if [[ "$v_TIME2" = "129.6.15.28" ]]; then
+			warning "  The v_TIME2 configuration option is set to default."
+		fi
+
+		# Warn on v_TIME3 default setting.
+		if [[ "$v_TIME3" = "129.6.15.29" ]]; then
+			warning "  The v_TIME3 configuration option is set to default."
+		fi
+
+		# Exit on unset v_SUDO_GROUP.
+		if [ -z $v_SUDO_GROUP ]; then
+			error "  The v_SUDO_GROUP configuration option cannot be empty."
+		fi
+
+		# Exit on unset v_LOCAL_ADMIN.
+		if [ -z $v_LOCAL_ADMIN ]; then
+			error "  The v_LOCAL_ADMIN configuration option cannot be empty."
+		fi
+
+		# Exit on unset v_LOCAL_ADMIN_PASS.
+		if [ -z $v_LOCAL_ADMIN_PASS ]; then
+			error "The v_LOCAL_ADMIN_PASS configuration option cannot be empty."
+		fi
+
+		# Exit on unset v_VALID_DOMAIN_USER.
+		if [ -z $v_VALID_DOMAIN_USER ]; then
+			error "The v_VALID_DOMAIN_USER configuration option cannot be empty."
+		fi
+	fi
+}
+
+###
+# Check if script previously run.
+#
+# TODO: Check if the packages are already installed and interrogate
+#        configuration files to ensure the script has already been run.
+#
+# This function is used to interrogate the installation check file if it exists
+# then display a warning.
+#
+# Usage:
+#   check_installed
+#
+function check_installed()
+{
+	info "Checking the current installation status."
+
+	if [ -e "$g_INSTALL_FLAG" ]; then
+		warning "  This workstation has already been modified by this script."
+
+		if test_yn "  Would you like to continue"; then
+			rm -f $g_INSTALL_FLAG
+		else
+			error "  Script execution terminated at operator request."
+		fi
+	fi
+}
+
+###
+# Backup configuration files.
+#
+# This function is used to backup the configuration files modified during the
+# scripts execution.
+#
+# Usage:
+#   backup_configuration
+#
+function backup_configuration()
+{
+	info "Backup configuration files."
+
+	# *param:	array	$l_CONF		An array used to hold the list of configuration files that the script will backup.
+	declare -a l_CONF=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
+
+	for ((I=0;I<${#l_CONF[@]};I++)); do
+		if [ -e ${l_CONF[$I]} ]; then
+			info "  The configuration file \"${l_CONF[$I]}\" exists, creating a backup."
+			cp --backup=t  ${l_CONF[$I]} ${l_CONF[$I]}.bak
+		else
+			warning "  The configuration file \"${l_CONF[$I]}\" doesn't exist."
+		fi
+	done
+}
+
+###
+# Install software packages.
+#
+# This function is used to install the packages necessary for proper
+# communication with Active Directory.
+#
+# Usage:
+#   install_dependencies
+#
+function install_dependencies()
+{
+	info "Installing the packages required for Active Directory authentication."
+
+	# On Ubuntu 18.04 openssh-server and net-tools are not installed, we
+	# install them to be compatable with this script.
+	DEBIAN_FRONTEND=noninteractive apt-get --yes --force-yes install krb5-user samba sssd ntp nfs-common nfs-kernel-server openssh-server net-tools > $g_LOGFILE 2>&1
+	if [[ $? > 0 ]]; then
+		error "  An error occured while installing one of the dependent packages."
+	fi
+}
+
+###
+# Write or modify configuration files.
+#
+# TODO: Set flags for each /etc/pam.d file then warn and write out to log file
+#        with a list of possible fixes.
+#
+# This function is used to write or modify the configuration files needed to
+# configure SSO access to an Active Directory domain.
+#
+# Usage:
+#   write_configuration
+#
+function write_configuration ()
+{
+	# *param:	boolean	$l_INTFCE_FLAG		Boolean value used to indicate existing dns-search and dns-nameserver entries in interface configuration.
+	# *param:	boolean	$l_PASSWD_FLAG		Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:	boolean	$l_SUDOERS_FLAG	Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:	boolean	$l_GROUP_FLAG		Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:	boolean	$l_NETGROUP_FLAG	Boolean value used to indicate existing nsswitch.conf configuration.
+	local -i l_INTFCE_FLAG=0
+	local -i l_PASSWD_FLAG=0
+	local -i l_SUDOERS_FLAG=0
+	local -i l_GROUP_FLAG=0
+	local -i l_NETGROUP_FLAG=0
+
+	# ************************** configuration files **************************
+	info "Writing new or modifying existing configuration files."
+
+	## /etc/krb5.conf
+	info "  Writing new \"/etc/krb5.conf\" configuration file."
+
+	cat <<-EOF > /etc/krb5.conf
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	[libdefaults]
+		ticket_lifetime = 24000
+		default_realm = ${v_DOMAIN_NAME^^}
+		default_tgs_entypes = rc4-hmac des-cbc-md5
+		default_tktenctypes = rc4-hmac des-cbc-md5
+		permitted_enctypes = rc4-hmac des-cbc-md5
+		dns_lookup_realm = true
+		dns_lookup_kdc = true
+		dns_fallback = yes
+
+	[realms]
+		${v_DOMAIN_NAME^^}= {
+		kdc = ${v_FQDN_AD_1,,}:88
+		kdc = ${v_FQDN_AD_2,,}:88
+		default_domain = ${v_DOMAIN_NAME,,}
+	}
+
+	[domain_realm]
+		.${v_DOMAIN_NAME,,} = ${v_DOMAIN_NAME^^}
+		${v_DOMAIN_NAME,,} = ${v_DOMAIN_NAME^^}
+
+	[appdefaults]
+		pam = {
+		debug = false
+		ticket_lifetime = 36000
+		renew_lifetime = 36000
+		forwardable = true
+		krb4_convert = false
+	}
+
+	[logging]
+		default = FILE:/var/log/krb5libs.log
+		kdc = FILE:/var/log/krb5kdc.log
+		admin_server = FILE:/var/log/kadmind.log
+	EOF
+
+	## /etc/samba/smb.conf
+	info "  Writing new \"/etc/samba/smb.conf\" configuration file."
+
+	cat <<-EOF > /etc/samba/smb.conf
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	[global]
+		netbios name = ${v_SERVER_OR_WORKSTATION_NAME,,}
+		server string = ${v_SERVER_OR_WORKSTATION_ID_STRING} - Samba Server %v
+
+		workgroup = ${v_SHORT_DOMAIN_NAME^^}
+		client signing = yes
+		client use spnego = yes
+		kerberos method = secrets and keytab
+		realm = ${v_DOMAIN_NAME^^}
+		security = ads
+
+		inherit acls = yes
+		map acl inherit = yes
+		acl group control = yes
+		admin users = @"${v_SHORT_DOMAIN_NAME^^}/${v_ADMIN_GROUP,,}"
+
+		load printers = no
+		printcap name = /dev/null
+		disable spoolss = yes
+
+		log file = /var/log/samba/samba.log
+		log level = 3
+		max log size = 50
+	EOF
+
+	## /etc/ntp.conf
+	info "  Writing new \"/etc/ntp.conf\" configuration file."
+
+	cat <<-EOF > /etc/ntp.conf
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	# /etc/ntp.conf, configuration for ntpd; see ntp.conf(5) for help
+
+	driftfile /var/lib/ntp/ntp.drift
+
+	statistics loopstats peerstats clockstats
+	filegen loopstats file loopstats type day enable
+	filegen peerstats file peerstats type day enable
+	filegen clockstats file clockstats type day enable
+
+	server $v_TIME1
+	server $v_TIME2
+	server $v_TIME3
+
+	# By default, exchange time with everybody, but don't allow configuration.
+	restrict -4 default kod notrap nomodify nopeer noquery
+	restrict -6 default kod notrap nomodify nopeer noquery
+
+	# Local users may interrogate the ntp server more closely.
+	restrict 127.0.0.1
+	restrict ::1
+	EOF
+
+	## /etc/pam.d/common-account
+	if ! grep -q 'pam_sss.so' /etc/pam.d/common-account; then
+		warning "  The configuration file /etc/pam.d/common-account is missing a line."
+	fi
+
+	## /etc/pam.d/common-auth
+	if ! grep -q 'pam_sss.so' /etc/pam.d/common-auth; then
+		warning "  The configuration file /etc/pam.d/common-auth is missing a line."
+	fi
+
+	## /etc/pam.d/common-password
+	if ! grep -q 'pam_sss.so' /etc/pam.d/common-password; then
+		warning "  The configuration file /etc/pam.d/common-password is missing a line."
+	fi
+
+	## /etc/pam.d/common-session
+	if grep -q 'pam_sss.so' /etc/pam.d/common-session; then
+		if ! grep -q 'pam_mkhomedir.so'  /etc/pam.d/common-session; then
+			sed -i '/.*pam_sss.so/a session required        pam_mkhomedir.so skel=/etc/skel/ umask=0022' /etc/pam.d/common-session
+		fi
+	else
+		warning "  The configuration file /etc/pam.d/common-session is missing a line."
+	fi
+
+	## /etc/sudoers
+	info "  Writing new \"/etc/sudoers\" configuration file."
+
+	cat <<-EOF > /etc/sudoers
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	#
+	# This file MUST be edited with the 'visudo' command as root.
+	#
+	# Please consider adding local content in /etc/sudoers.d/ instead of
+	# directly modifying this file.
+	#
+	# See the man page for details on how to write a sudoers file.
+	#
+	Defaults     env_reset
+	Defaults     mail_badpass
+	Defaults     secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+	# Host alias specification
+
+	# User alias specification
+
+	# Cmnd alias specification
+
+	# User privilege specification
+	root ALL=(ALL:ALL) ALL
+	${v_LOCAL_ADMIN}    ALL=(ALL) NOPASSWD:ALL
+
+	# Members of the admin group may gain root privileges
+	%admin ALL=(ALL) ALL
+
+	# Allow members of group sudo to execute any command
+	%sudo     ALL=(ALL:ALL) ALL
+
+	# See sudoers(5) for more information on "#include" directives:
+
+	#includedir /etc/sudoers.d
+	%${v_SUDO_GROUP,,} ALL=(ALL:ALL) ALL
+	EOF
+
+	# Set ownership and permissions on the /etc/sudoers file.
+	chown root:root /etc/sudoers
+	chmod 440 /etc/sudoers
+
+	## /etc/hostname
+	info "  Writing new \"/etc/hostname\" configuration file."
+	echo ${v_SERVER_OR_WORKSTATION_NAME,,} >> /etc/hostname
+
+	## /etc/hosts
+	info "  Writing new \"/etc/hosts\" configuration file."
+
+	cat <<-EOF > /etc/hosts
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	127.0.0.1        localhost
+	127.0.1.1        $v_SERVER_OR_WORKSTATION_NAME    $v_SERVER_OR_WORKSTATION_NAME.$v_DOMAIN_NAME
+	$v_IP_ADDRESS    $v_SERVER_OR_WORKSTATION_NAME    $v_SERVER_OR_WORKSTATION_NAME.$v_DOMAIN_NAME
+
+	# The following lines are desirable for IPv6 capable hosts
+	::1     localhost ip6-localhost ip6-loopback
+	ff02::1 ip6-allnodes
+	ff02::2 ip6-allrouters
+	EOF
+
+	## /etc/network/interfaces
+	info "  Writing new \"/etc/network/interfaces\" configuration file."
+
+	if grep -q "dns-search ${v_DOMAIN_NAME,,}\|dns-nameservers $v_FQDN_IP_1 $v_FQDN_IP_2" /etc/network/interfaces; then
+		warning "  The configuration line(s) dns-search ${v_DOMAIN_NAME,,} and dns-nameservers $v_FQDN_IP_1 $v_FQDN_IP_2 already exist."
+		l_INTFCE_FLAG=1
+	else
+		sed -i "/iface $v_NETWORK_INTERFACE inet .*/a dns-search ${v_DOMAIN_NAME,,}\ndns-nameservers $v_FQDN_IP_1 $v_FQDN_IP_2" /etc/network/interfaces
+		ifdown $v_NETWORK_INTERFACE 2> /dev/null && ifup $v_NETWORK_INTERFACE 2> /dev/null
+	fi
+
+	if (($l_INTFCE_FLAG==1)); then
+		warning "  The configuration file /etc/network/interfaces was not updated successfully."
+	fi
+
+	## /etc/nsswitch.conf
+	info "  Updating the \"/etc/nsswitch.conf\" configuration file."
+
+	if grep -q 'passwd:.*sss' /etc/nsswitch.conf; then
+		l_PASSWD_FLAG=1
+	else
+		sed -i '/^passwd:/ s/$/ sss/' /etc/nsswitch.conf
+	fi
+
+	if grep -q 'group:.*sss' /etc/nsswitch.conf; then
+		l_GROUP_FLAG=1
+	else
+		sed -i '/^group:/ s/$/ sss/' /etc/nsswitch.conf
+	fi
+
+	if grep -q 'netgroup:.*sss' /etc/nsswitch.conf; then
+		l_NETGROUP_FLAG=1
+	else
+		sed -i '/^netgroup:/ s/$/ sss/' /etc/nsswitch.conf
+	fi
+
+	if grep -q 'sudoers:.*sss' /etc/nsswitch.conf; then
+		l_SUDOERS_FLAG=1
+	else
+		sed -i '/^sudoers:/ s/$/ sss/' /etc/nsswitch.conf
+	fi
+
+	if [ $l_SUDOERS_FLAG == "1" ] || [ $l_PASSWD_FLAG == "1" ] || [ $l_GROUP_FLAG == "1" ] || [ $l_NETGROUP_FLAG == "1" ]; then
+		warning "  The configuration file \"/etc/nsswitch.conf\" was not updated successfully."
+	fi
+
+	## /etc/sssd/sssd.conf
+	info "  Writing new \"/etc/sssd/sssd.conf\" configuration file."
+
+	cat <<-EOF > /etc/sssd/sssd.conf
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	[sssd]
+	services = nss, pam
+	config_file_version = 2
+	domains = ${v_DOMAIN_NAME^^}
+
+	[domain/${v_DOMAIN_NAME^^}]
+	id_provider = ad
+	access_provider = ad
+
+	# Use this if users are being logged in at /.
+	# This example specifies /home/DOMAIN-FQDN/user as $HOME.  Use with pam_mkhomedir.so
+	override_homedir = /home/%d/%u
+
+	# Enumeration is discouraged for performance reasons.
+	enumerate = true
+	EOF
+
+	# Set ownership and permissions on the /etc/sssd/sssd.conf file.
+	chown root:root /etc/sssd/sssd.conf
+	chmod 600 /etc/sssd/sssd.conf
+
+	## /etc/ssh/sshd_config
+	info "  Writing new \"/etc/ssh/sshd_config\" configuration file."
+
+	cat <<-EOF > /etc/ssh/sshd_config
+	# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+	# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
+
+	Port 22
+	#ListenAddress $v_IP_ADDRESS
+	Protocol 2
+
+	HostKey /etc/ssh/ssh_host_rsa_key
+	HostKey /etc/ssh/ssh_host_dsa_key
+	HostKey /etc/ssh/ssh_host_ecdsa_key
+	HostKey /etc/ssh/ssh_host_ed25519_key
+	UsePrivilegeSeparation yes
+
+	Banner /etc/issue.net
+
+	KeyRegenerationInterval 3600
+	ServerKeyBits 1024
+
+	SyslogFacility AUTH
+	LogLevel INFO
+
+	LoginGraceTime 120
+	PermitRootLogin no
+	StrictModes yes
+
+	RSAAuthentication yes
+	PubkeyAuthentication yes
+
+	IgnoreRhosts yes
+	RhostsRSAAuthentication no
+	HostbasedAuthentication no
+
+	PermitEmptyPasswords no
+	ChallengeResponseAuthentication no
+
+	PasswordAuthentication yes
+
+	AllowTcpForwarding no
+	X11Forwarding no
+	X11DisplayOffset 10
+	PrintMotd no
+	PrintLastLog yes
+	TCPKeepAlive yes\
+
+	AcceptEnv LANG LC_*
+
+	Subsystem sftp /usr/lib/openssh/sftp-server
+
+	UsePAM yes
+	AllowGroups ssh ${v_SUDO_GROUP,,}
+	EOF
+
+	info "  Writing the new \"/etc/issue\" and \"/etc/issue.net\" file(s)."
+
+	cat <<-EOF > /etc/issue
+	****************************************************************************
+	********************************* WARNING **********************************
+	****************************************************************************
+	*                                                                          *
+	*   This computer  system is the private property of  its owner, whether   *
+	*   individual, corporate or government.  It is for authorized use only.   *
+	*   Users  (authorized or  unauthorized) have  no  explicit or  implicit   *
+	*   expectation of privacy.                                                *
+	*                                                                          *
+	*   Any or all uses of this system and all files on  this system  may be   *
+	*   intercepted, monitored,  recorded,  copied, audited, inspected,  and   *
+	*   disclosed to your employer, to authorized site, government,  and law   *
+	*   enforcement personnel, as well as authorized officials of government   *
+	*   agencies, both domestic and foreign.                                   *
+	*                                                                          *
+	*   By  using  this  system,  the  user  consents  to such interception,   *
+	*   monitoring, recording, copying, auditing, inspection, and disclosure   *
+	*   at the discretion of such  personnel or officials.   Unauthorized or   *
+	*   improper  USE  of  this  system  may  result  in civil  and criminal   *
+	*   penalties and administrative or disciplinary action, as appropriate.   *
+	*   By continuing  to use this  system you indicate  your  awareness  of   *
+	*   and  consent  to  these  terms  and  conditions  of  use.              *
+	*                                                                          *
+	*   LOG OFF IMMEDIATELY if you do not  agree to  the  conditions  stated   *
+	*   in this warning.                                                       *
+	****************************************************************************
+	EOF
+
+	# Copy the login banner (/etc/issue) to the network login (SSH) banner
+	# (/etc/issue.net).
+	cp -f /etc/issue /etc/issue.net
+}
+
+###
+# Restart daemons.
+#
+# This function is used to restart the daemons that are necessary for SSO to
+# properly communicate and leverage Active Directory for security.
+#
+# Usage:
+#   daemon_restart
+#
+function daemon_restart()
+{
+	info "Restarting the daemon(s)."
+
+	# *param:	array	$l_SVC		Array used to hold the list of daemons that the script will need to restart.
+	declare -a l_SVC=(ntp smbd nmbd nfs-kernel-server sssd ssh);
+
+	# Temporarially turn off error trapping for non-starting daemons.
+	set +e
+		for ((I=0;I<${#l_SVC[@]};I++)); do
+			service ${l_SVC[$I]} stop &> /dev/null
+			service ${l_SVC[$I]} start &> /dev/null
+
+			ps auxw | grep ${l_SVC[$I]} | grep -v grep &> /dev/null
+			if [ $? != 0 ]; then
+				warning "  The ${l_SVC[$I]} service failed to start."
+			fi
+		done
+	set -e
+}
+
+###
+# Select the network interface.
+#
+# This function is used to automatically select or list and have the script
+# operator choose a network interface.
+#
+# Usage:
+#   select_interface
+#
+function select_interface()
+{
+	# *param:	integer	$l_TOTAL_NICS		Integer value used to indicate the number of NIC (Network Interface Cards) installed on the workstation or server.
+	local -i l_TOTAL_NICS=0
+
+	# *param:	string	$l_INTERFACES		String value used to hold the names of the network interfaces.
+	local l_INTERFACES=""
+
+	# *param:	string	$l_OPTION_LIST		String value used to hold the network interface(s) selection.
+	local l_OPTION_LIST=""
+
+	# List all installed interfaces, filter the loopback interface then count the result.
+	l_TOTAL_NICS=$(ls /sys/class/net | grep -v 'lo' | wc -l)
+	if [ $l_TOTAL_NICS -gt 1 ]; then
+		while true; do
+			info "Interactive selection of the network interface."
+
+			# List all installed interfaces, filter the loopback then add each one as an array element.
+			mapfile -t l_INTERFACES < <(ls /sys/class/net | awk '$0 !~ "lo"{print}')
+			for ((I=0;I<${#l_INTERFACES[@]};I++)); do
+				printf "%s) %s\n" "$I" "${l_INTERFACES[$I]}"
+			done
+
+			read -r -p "  Select an interface from the list shown above: " l_OPTION_LIST
+
+			# The selection MUST be numeric, greater than or equal to 0 and less than or equal to the total
+			# number of enumerated interfaces minus one (interface numbers are assigned starting at zero).
+			if [[ $l_OPTION_LIST =~ ^[0-9]$ ]] && (( ($l_OPTION_LIST >= 0) && ($l_OPTION_LIST <= $((${#l_INTERFACES[@]}-1))) )); then
+				printf "  You selected interface \"${l_INTERFACES[$l_OPTION_LIST]}\".\n"
+				l_NETWORK_INTERFACE="${l_INTERFACES[$l_OPTION_LIST]}"
+				break
+			else
+				printf "  Incorrect response, please try again.\n"
+			fi
+		done
+	else
+		info "Automatic selection of the network interface."
+
+		l_NETWORK_INTERFACE=$(ls /sys/class/net | awk '$0 !~ "lo"{print}')
+		echo "$l_NETWORK_INTERFACE"
+	fi
+}
+
+###
+# Format and capture the elements from the configuration file.
+#
+# This function is used to format the display of attributes from the configuration
+# file during an interactive setup.
+#
+# Usage:
+#   attribute $1 $2
+#
+# *param:		string	$1	Text of the attribute you are setting.
+# *param: 	string	$2	Attribute text or variable.
+# *return:	string		Value entered from keyboard.
+#
+function attribute ()
+{
+	# *param:	integer	$l_NUM_ARGS	Integer value used to indicate number of arguments passed into the function.
+	l_NUM_ARGS='^[1-2]+$'
+
+	# *param:	string	$l_REPLY		String used to hold the response from the keyboard.
+	local l_REPLY=""
+
+	# *param:	string	$l_ATTRIBUTE	String used to capture input response from the keyboard.
+	local l_ATTRIBUTE=""
+
+	if ! [[ $# =~ $l_NUM_ARGS ]]; then
+		error "  Function: attribute was passed a value that is out of bounds.  Did you quote the variable?"
+	fi
+
+	if [ -z "$2" ]; then
+		echo -e "${g_YELLOW_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}             The current ${1} is empty." >&2
+		l_REPLY="y"
+	else
+		echo -e "${g_YELLOW_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}             The current ${1} is: ${g_WHITE_TEXT}${2}${g_RESET_ATTS}" >&2
+	fi
+
+	if [ -z "$l_REPLY" ]; then
+		read -e -r -s -n 1 -p "                Would you like to change this (y/n): " l_REPLY
+	fi
+
+	if [[ ${l_REPLY} =~ ^[Yy]$ ]]; then
+		while true; do
+			read -r -p "${g_YELLOW_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}             Enter the new ${1}: " l_ATTRIBUTE
+			if [ ! -z "$l_ATTRIBUTE" ]; then
+				break
+			fi
+		done
+	else
+		l_ATTRIBUTE="$2"
+	fi
+
+	# Return value to calling function.
+	echo "$l_ATTRIBUTE"
+}
+
+###
+# Interactive update configuration file.
+#
+# TODO: RegEx String Validation.
+#        Check for account collision for local admin account.
+#
+# This function is used to collect workstation or server specific
+# information from the script operator and update the configuration file.
+#
+# Usage:
+#   interactive_config
+#
+function interactive_config()
+{
+	# *param:	string	$l_COLLECTION_RESPONSE	String variable used to hold the confirmation response.
+	local l_COLLECTION_RESPONSE=""
+
+	info "Interactive configuration of the scripts configuration file."
+
+	until [[ $l_COLLECTION_RESPONSE =~ ^[Y|y]$ ]]; do
+		# Domain Administrators Group.
+		v_ADMIN_GROUP=$( attribute "name of the domain administrators group" "${v_ADMIN_GROUP}" )
+		sed -i "s/v_ADMIN_GROUP=\"[^\"]*\"/v_ADMIN_GROUP=\"${v_ADMIN_GROUP}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Workstation or Server NETBIOS Name.
+		v_SERVER_OR_WORKSTATION_NAME=$( attribute "name of the workstation or server" "${v_SERVER_OR_WORKSTATION_NAME}" )
+		sed -i "s/v_SERVER_OR_WORKSTATION_NAME=\"[^\"]*\"/v_SERVER_OR_WORKSTATION_NAME=\"${v_SERVER_OR_WORKSTATION_NAME}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Network Interface.
+		if [ -z "$v_NETWORK_INTERFACE" ]; then
+			v_NETWORK_INTERFACE=$(select_interface)
+			sed -i "s/v_NETWORK_INTERFACE=\"[^\"]*\"/v_NETWORK_INTERFACE=\"${v_NETWORK_INTERFACE}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+		fi
+
+		# IP Address.
+		if ((g_ARG_WORKSTATION=0)); then
+			warning "  The network configuration is not statically set; is this a workstation?"
+			v_IP_ADDRESS=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
+		else
+			v_IP_ADDRESS=$(ifconfig | sed -En 's/127.0.0.1//;s/.*inet (addr:)?(([0-9]*\.){3}[0-9]*).*/\2/p')
+		fi
+		sed -i "s/v_IP_ADDRESS=\"[^\"]*\"/v_IP_ADDRESS=\"${v_IP_ADDRESS}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Domain Name.
+		v_DOMAIN_NAME=$( attribute "fully quantified domain name for Active Directory" "${v_DOMAIN_NAME}" )
+		sed -i "s/v_DOMAIN_NAME=\"[^\"]*\"/v_DOMAIN_NAME=\"${v_DOMAIN_NAME}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Domain Short Name or NetBios Name.
+		v_SHORT_DOMAIN_NAME=$( attribute "short domain name or NETBIOS name for Active Directory" "${v_SHORT_DOMAIN_NAME}" )
+		sed -i "s/v_SHORT_DOMAIN_NAME=\"[^\"]*\"/v_SHORT_DOMAIN_NAME=\"${v_SHORT_DOMAIN_NAME}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# FQDN First Domain Controller.
+		v_FQDN_AD_1=$( attribute "fully quantified domain name for the first domain controller" "${v_FQDN_AD_1}" )
+		sed -i "s/v_FQDN_AD_1=\"[^\"]*\"/v_FQDN_AD_1=\"${v_FQDN_AD_1}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		v_FQDN_IP_1=$( attribute "IPv4 address for the first domain controller" "${v_FQDN_IP_1}" )
+		sed -i "s/v_FQDN_IP_1=\"[^\"]*\"/v_FQDN_IP_1=\"${v_FQDN_IP_1}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# FQDN Second Domain Controller.
+		v_FQDN_AD_2=$( attribute "fully quantified domain name for the second domain controller" "${v_FQDN_AD_2}" )
+		sed -i "s/v_FQDN_AD_2=\"[^\"]*\"/v_FQDN_AD_2=\"${v_FQDN_AD_2}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		v_FQDN_IP_2=$( attribute "IPv4 address for the second domain controller" "${v_FQDN_IP_2}" )
+		sed -i "s/v_FQDN_IP_2=\"[^\"]*\"/v_FQDN_IP_2=\"${v_FQDN_IP_2}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Network Time Server 1.
+		v_TIME1=$( attribute "IPv4 address of the first network time server" "${v_TIME1}" )
+		sed -i "s/v_TIME1=\"[^\"]*\"/v_TIME1=\"${v_TIME1}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Network Time Server 2.
+		v_TIME2=$( attribute "IPv4 address of the second network time server" "${v_TIME2}" )
+		sed -i "s/v_TIME2=\"[^\"]*\"/v_TIME2=\"${v_TIME2}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Network Time Server 3.
+		v_TIME3=$( attribute "IPv4 address of the third network time server" "${v_TIME3}" )
+		sed -i "s/v_TIME3=\"[^\"]*\"/v_TIME3=\"${v_TIME3}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Sudo Group.
+		v_SUDO_GROUP=$( attribute "name of the Active Directory sudo group" "${v_SUDO_GROUP}" )
+		sed -i "s/v_SUDO_GROUP=\"[^\"]*\"/v_SUDO_GROUP=\"${v_SUDO_GROUP}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Local workstation or server administrator and password.
+		v_LOCAL_ADMIN=$( attribute "local administrator" "${v_LOCAL_ADMIN}" )
+		sed -i "s/v_LOCAL_ADMIN=\"[^\"]*\"/v_LOCAL_ADMIN=\"${v_LOCAL_ADMIN}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		v_LOCAL_ADMIN_PASS=$( attribute "password for the local administrator" "${v_LOCAL_ADMIN_PASS}" )
+		sed -i "s/v_LOCAL_ADMIN_PASS=\"[^\"]*\"/v_LOCAL_ADMIN_PASS=\"${v_LOCAL_ADMIN_PASS}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Domain test user.
+		v_VALID_DOMAIN_USER=$( attribute "domain user test account name" "${v_VALID_DOMAIN_USER}" )
+		sed -i "s/v_VALID_DOMAIN_USER=\"[^\"]*\"/v_VALID_DOMAIN_USER=\"${v_VALID_DOMAIN_USER}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
+
+		# Validate Information.
+		info "Please validate your entered information."
+		printf "\n"
+		printf "                Workstation or server name:          ${g_WHITE_TEXT}${v_SERVER_OR_WORKSTATION_NAME,,}\n${g_RESET_ATTS}"
+		printf "                Active Directory FQDN:               ${g_WHITE_TEXT}${v_DOMAIN_NAME}\n${g_RESET_ATTS}"
+		printf "                Domain short name:                   ${g_WHITE_TEXT}${v_SHORT_DOMAIN_NAME}\n${g_RESET_ATTS}"
+		printf "                First Domain Controller:             ${g_WHITE_TEXT}${v_FQDN_AD_1,,}\n${g_RESET_ATTS}"
+		printf "                                                     ${g_WHITE_TEXT}${v_FQDN_IP_1,,}\n${g_RESET_ATTS}"
+		printf "                Second Domain Controller:            ${g_WHITE_TEXT}${v_FQDN_AD_2,,}\n${g_RESET_ATTS}"
+		printf "                                                     ${g_WHITE_TEXT}${v_FQDN_IP_2,,}\n${g_RESET_ATTS}"
+		printf "                Domain administrator's group:        ${g_WHITE_TEXT}${v_ADMIN_GROUP,,}\n${g_RESET_ATTS}"
+		printf "                Active Directory Sudo group:         ${g_WHITE_TEXT}${v_SUDO_GROUP,,}\n${g_RESET_ATTS}"
+		printf "\n"
+		printf "                Local administrator user:            ${g_WHITE_TEXT}${v_LOCAL_ADMIN,,}\n${g_RESET_ATTS}"
+		printf "                Local administrator password:        ${g_WHITE_TEXT}${v_LOCAL_ADMIN_PASS}\n${g_RESET_ATTS}"
+		printf "\n"
+		printf "                Default Interface:                   ${g_WHITE_TEXT}${v_NETWORK_INTERFACE,,}\n${g_RESET_ATTS}"
+		printf "                IPv4 Address:                        ${g_WHITE_TEXT}${v_IP_ADDRESS,,}\n${g_RESET_ATTS}"
+		printf "\n"
+
+		# Validate Information Response.
+		read -e -r -s -n 1 -p "         Please verify that your information is correct, (y/n)?" l_COLLECTION_RESPONSE
+	done
+
+	info "  The ${g_SCRIPT_PATH}/${g_CONFFILE} was updated successfully."
+}
+
+###
+# Show the configuration files.
+#
+# TODO: Output formatting.
+#
+# This function is used to display the configuration files modified by this script.
+#
+# Usage:
+#   show_config
+#
+function show_config ()
+{
+	# *param:	array	$l_FILES		Array that holds all of the configuration files modified by this script.
+	declare -a FILES=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
+
+	for ((I=0;I<${#FILES[@]};I++)); do
+		if [ -e ${FILES[$I]} ]; then
+			clear
+			info "Showing the \"${FILES[$I]}\" configuration file."
+			egrep --color "$" ${FILES[$I]}
+			press_enter_to_continue
+		fi
+	done
+
+	cleanup_and_exit_with_code 0
+}
+
+###
+# Join Active Directory Domain
+#
+# This function is used to gather the credentials and join the workstation or
+# server to the Active Directory domain as a member.
+#
+# Usage:
+#   domain_join
+#
+function domain_join ()
+{
+	# *param:	string	$l_KTICKET			String value for holding the Kerberos ticket obtained from the domain controller.
+	local l_KTICKET
+
+	# *param:	string	$l_KERBEROS_USERNAME	String value for holding the Kerberos username username@KERBEROS_REALM.
+	local l_KERBEROS_USERNAME
+
+	info "Joining the workstation or server to the domain."
+
+	if [ -z  $v_DOMAIN_NAME ]; then
+		read -p "  Enter the administrator's username for $v_DOMAIN_NAME: " v_DOM_USERNAME
+	fi
+
+	l_KERBEROS_USERNAME="$v_DOM_USERNAME@${v_DOMAIN_NAME^^}"
+
+	if [ -z $v_DOM_PASSWORD ]; then
+		read -sp "  Enter the password for $v_DOM_USERNAME: " v_DOM_PASSWORD
+	fi
+
+	echo $v_DOM_PASSWORD | kinit $l_KERBEROS_USERNAME &> /dev/null
+	KTICKET=`klist | grep ${v_DOMAIN_NAME^^}`
+
+	if [ -n "$KTICKET" ]; then
+		info "  You have successfully retrieved a Kerberos ticket from the domain controller."
+
+		net ads join -U $v_DOM_USERNAME%$v_DOM_PASSWORD &> /dev/null
+		if [ $? -eq 0 ]; then
+			info "  The workstation or server was joined to the domain successfully."
+		else
+			error "  There was an error while joining the workstation or server to the domain."
+		fi
+
+		set +e
+			getent passwd $v_DOM_USERNAME &> /dev/null
+		set -e
+
+		if [ $? -eq 0 ]; then
+			info "  The getent command successfully retreived the password entries from Active Directory."
+		else
+			error "  The getent command was unable to retrieve the password entries from Active Directory."
+		fi
+	else
+		error "  A Kerberos ticket was not retreived from the domain controller."
+	fi
+}
+
+###
+# Local account creation.
+#
+# This function is used to setup a local administrative username and password.
+#
+# Usage:
+#   local_admin_account
+#
+function local_admin_account ()
+{
+	info "Creating a local administrator account."
+
+	if id -u $v_LOCAL_ADMIN &> /dev/null; then
+		adduser --disabled-password --gecos "" $v_LOCAL_ADMIN
+		echo -e "${v_LOCAL_ADMIN}:${v_LOCAL_ADMIN_PASS}" | chpasswd
+		usermod -aG sudo $v_LOCAL_ADMIN
+		usermod -aG ssh $v_LOCAL_ADMIN
+
+		info "  The local administrator account was created successfully."
+	else
+		warning "  The local administrator account already exists."
+	fi
+}
+
+###
+# Update the file system table.
+#
+# This function is used to setup NFS and CIFS mappings in the file system table.
+#
+# Usage:
+#   fstab_modify
+#
+function fstab_modify ()
+{
+	info "Modifying the file system table."
+
+	if [ -f "${g_SCRIPT_PATH}/${g_FSTABFILE}" ]; then
+		info "  Writing changes to the filesystem table."
+
+		cat "${g_SCRIPT_PATH}/${g_FSTABFILE}" >> /etc/fstab
+	else
+		warning "  The configuration test file doesn't exist!"
+	fi
+}
+
+###
+# Test configuration.
+#
+# This function is used to validate a successful domain-join by testing it
+# against a valid test user.
+#
+# Usage:
+#   configuration_test
+#
+function configuration_test ()
+{
+	info "Testing the configuration."
+
+	# Test the domain-join by getting the id of a valid domain user.
+	id $v_VALID_DOMAIN_USER > /dev/null
+
+	if [[ $? != 0 ]]; then
+		warning "  Please check the configuration, the test user was not found on the domain."
+	else
+		info "  The test users account was found in the domain."
+	fi
+}
+
+# ******************** start of script proper ********************
+process_command_line_options "${@}"
+configuration_file
+internal_consistency_option_checks
+
+# Process one-off options and exit.
+if ((g_ARG_HELP==1)); then
+	print_help
+	cleanup_and_exit_with_code 0
+elif ((g_ARG_RESTART==1)); then
+	daemon_restart
+	cleanup_and_exit_with_code 0
+elif ((g_ARG_SHOWCONF==1)); then
+	show_config
+	cleanup_and_exit_with_code 0
+elif ((g_ARG_VERSION==1)); then
+	print_version
+	cleanup_and_exit_with_code 0
+fi
+
+# Interactive configuration of the configuration file
+if ((g_ARG_INTR_CONF==1)); then
+	info "The interactive configuration file option was selected."
+
+	if [ -f "${g_SCRIPT_PATH}/${g_CONFFILE}" ]; then
+		interactive_config
+	else
+		error "  The configuration file doesn't exist!"
+	fi
+
+	cleanup_and_exit_with_code 0
+fi
+
+if ((g_ARG_INSTALL==1)); then
+	banner
+	check_installed
+	backup_configuration
+	install_dependencies
+	write_configuration
+	daemon_restart
+	domain_join
+	local_admin_account
+	if ((g_ARG_WORKSTATION==1)); then
+		fstab_modify
+	fi
+	daemon_restart
+
+	echo "This workstation or server was installed on: $(date)\n" >> "${g_INSTALL_FLAG}"
+
+	configuration_test
+	cleanup_and_exit_with_code 0
+fi
