@@ -39,7 +39,7 @@
 #                       configuration file and are used globally throughout the
 #                       scripts execution.
 
-## Set how the script will behave when certain conditions are encountered.
+# **************************** set script behavior ****************************
 # Enable exiting immediately if a command exits with a non-zero status.
 set -e
 
@@ -54,19 +54,21 @@ shopt -s nullglob
 # *param:	string	$g_PROGNAME			String value used to hold the name of the script.
 # *param:	string	$g_CONFFILE			String value used to hold the name of the configuration file.
 # *param:	string	$g_LOGFILE			String value used to hold the name of the script log file.
+# *param:	string	$g_INSTALL_FLAG		String value used to hold the name of the flag file.
 # *param:	string	$g_VERSION			String value used to hold the version number of the script.
 # *param:	string	$g_PROGRAM_NAME		String value used to hold the proper name of the script.
 # *param:	string	$g_PROGRAM_DESCRIPTION	String value used to hold the summary description of the script.
 # *param:	string	$g_COPYRIGHT_TEXT		String value used to hold the copyright information.
 # *param:	string	$g_AUTHOR_TEXT			String value used to hold the aurhor(s) of the script.
-g_PROGNAME="$(basename "${0}")"
-g_CONFFILE="${g_PROGNAME}.conf"
-g_LOGFILE="${g_PROGNAME}.log"
-g_VERSION="3.00.01"
-g_PROGRAM_NAME="Active Directory Install"
-g_PROGRAM_DESCRIPTION="A script to manage SSO (Single Sign-On) for Linux workstations and servers."
-g_COPYRIGHT_TEXT="Copyright (c) 2014-2019"
-g_AUTHOR_TEXT="Dr. Matthew R. Kisow"
+declare g_PROGNAME="$(basename "${0}")"
+declare g_CONFFILE="${g_PROGNAME}.conf"
+declare g_LOGFILE="${g_PROGNAME}.log"
+declare g_INSTALL_FLAG="${g_SCRIPT_PATH}/${g_PROGNAME}.flag"
+declare g_VERSION="3.00.01"
+declare g_PROGRAM_NAME="Active Directory Install"
+declare g_PROGRAM_DESCRIPTION="A script to manage SSO (Single Sign-On) for Linux workstations and servers."
+declare g_COPYRIGHT_TEXT="Copyright (c) 2014-2019"
+declare g_AUTHOR_TEXT="Dr. Matthew R. Kisow"
 
 # *param:	string	$g_RED_TEXT		String value used to hold red color output displayed to the screen during script execution.
 # *param:	string	$g_GREEN_TEXT		String value used to hold green color output displayed to the screen during script execution.
@@ -102,13 +104,14 @@ g_SHOWPREFIX="${g_GREEN_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}"
 g_SCRIPT_PATH="`dirname \"$0\"`"
 g_SCRIPT_PATH="`( cd \"$g_SCRIPT_PATH\" && pwd )`"
 
-# *param:	boolean	$g_ARG_HELP		Boolean values used to indicate the help switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_INSTALL		Boolean values used to indicate the install switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_INTR_CONF	Boolean values used to indicate the interactive configuration switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_RESTART		Boolean values used to indicate the restart daemons switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_SHOWCONF	Boolean values used to indicate the show configuration switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_VERSION		Boolean values used to indicate the version switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_WORKSTATION	Boolean values used to indicate workstation switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_HELP		Boolean value used to indicate the help switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_INSTALL		Boolean value used to indicate the install switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_INTR_CONF	Boolean value used to indicate the interactive configuration switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_RESTART		Boolean value used to indicate the restart daemons switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_SHOWCONF	Boolean value used to indicate the show configuration switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_VERSION		Boolean value used to indicate the version switch was passed from the command line during script execution.
+# *param:	boolean	$g_ARG_WORKSTATION	Boolean value used to indicate workstation switch was passed from the command line during script execution.
+# *param:	boolean	$v_DEBUG			Boolean value used to enable the bash debug features.
 declare -i g_ARG_HELP=0
 declare -i g_ARG_INSTALL=0
 declare -i g_ARG_INTR_CONF=0
@@ -116,13 +119,7 @@ declare -i g_ARG_RESTART=0
 declare -i g_ARG_SHOWCONF=0
 declare -i g_ARG_VERSION=0
 declare -i g_ARG_WORKSTATION=0
-
-# ****************************** default values *******************************
-# *param:	boolean	$v_DEBUG			Boolean value used to enable the bash debug features 0 is false, 1 is true.
 declare -i g_DEBUG=0
-
-# *param:	string	$g_INSTALL_FLAG	String value used to hold the filename of the flag file.  This file is used to indicate if the script was previously run on the target workstation or server.
-g_INSTALL_FLAG="${g_SCRIPT_PATH}/${g_PROGNAME}.flag"
 
 # ****************************** script functions *****************************
 ###
