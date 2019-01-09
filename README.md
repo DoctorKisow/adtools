@@ -1,8 +1,8 @@
 # Active Directory Tools
 
 **adtools** - A script to manage SSO (Single Sign-On) for Linux workstations and servers.<br />
-Version: 3.00.01<br />
-Copyright &copy; 2014-2019, Matthew R. Kisow, D.Sc. <matthew.kisow@kisow.org><br />
+  Version: 3.00.01<br />
+  Copyright &copy; 2014-2019, Matthew R. Kisow, D.Sc. <matthew.kisow@kisow.org><br />
 
 ## Tasks
 - [ ] Function "check_installed" better checking required to eliminate the need for an installation flag file.
