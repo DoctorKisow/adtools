@@ -51,15 +51,15 @@ set -u
 shopt -s nullglob
 
 # ************************ global variable definitions ************************
-# *param:	string	$g_PROGNAME			String value used to hold the name of the script.
-# *param:	string	$g_CONFFILE			String value used to hold the name of the configuration file.
-# *param:	string	$g_LOGFILE			String value used to hold the name of the script log file.
-# *param:	string	$g_INSTALL_FLAG		String value used to hold the name of the flag file.
-# *param:	string	$g_VERSION			String value used to hold the version number of the script.
-# *param:	string	$g_PROGRAM_NAME		String value used to hold the proper name of the script.
-# *param:	string	$g_PROGRAM_DESCRIPTION	String value used to hold the summary description of the script.
-# *param:	string	$g_COPYRIGHT_TEXT		String value used to hold the copyright information.
-# *param:	string	$g_AUTHOR_TEXT			String value used to hold the aurhor(s) of the script.
+# *param:  string   $g_PROGNAME              String value used to hold the name of the script.
+# *param:  string   $g_CONFFILE              String value used to hold the name of the configuration file.
+# *param:  string   $g_LOGFILE               String value used to hold the name of the script log file.
+# *param:  string   $g_INSTALL_FLAG          String value used to hold the name of the flag file.
+# *param:  string   $g_VERSION               String value used to hold the version number of the script.
+# *param:  string   $g_PROGRAM_NAME          String value used to hold the proper name of the script.
+# *param:  string   $g_PROGRAM_DESCRIPTION   String value used to hold the summary description of the script.
+# *param:  string   $g_COPYRIGHT_TEXT        String value used to hold the copyright information.
+# *param:  string   $g_AUTHOR_TEXT           String value used to hold the aurhor(s) of the script.
 declare g_PROGNAME="$(basename "${0}")"
 declare g_CONFFILE="${g_PROGNAME}.conf"
 declare g_LOGFILE="${g_PROGNAME}.log"
@@ -70,16 +70,16 @@ declare g_PROGRAM_DESCRIPTION="A script to manage SSO (Single Sign-On) for Linux
 declare g_COPYRIGHT_TEXT="Copyright (c) 2014-2019"
 declare g_AUTHOR_TEXT="Dr. Matthew R. Kisow"
 
-# *param:	string	$g_RED_TEXT		String value used to hold red color output displayed to the screen during script execution.
-# *param:	string	$g_GREEN_TEXT		String value used to hold green color output displayed to the screen during script execution.
-# *param:	string	$g_YELLOW_TEXT		String value used to hold yellow color output displayed to the screen during script execution.
-# *param:	string	$g_BLUE_TEXT		String value used to hold blue color output displayed to the screen during script execution.
-# *param:	string	$g_MAGENTA_TEXT	String value used to hold magenta color output displayed to the screen during script execution.
-# *param:	string	$g_CYAN_TEXT		String value used to hold cyan color output displayed to the screen during script execution.
-# *param:	string	$g_WHITE_TEXT		String value used to hold white color output displayed to the screen during script execution.
-# *param:	string	$g_NORMAL_TEXT		String value used to hold normal color output displayed to the screen during script execution.
-# *param:	string	$g_RESET_TEXT		String value used to reset color output displayed to the screen during script execution.
-# *param:	string	$g_ALERT_TEXT		String value used to output an audible alert during script execution.
+# *param:  string   $g_RED_TEXT              String value used to hold red color output displayed to the screen during script execution.
+# *param:  string   $g_GREEN_TEXT            String value used to hold green color output displayed to the screen during script execution.
+# *param:  string   $g_YELLOW_TEXT           String value used to hold yellow color output displayed to the screen during script execution.
+# *param:  string   $g_BLUE_TEXT             String value used to hold blue color output displayed to the screen during script execution.
+# *param:  string   $g_MAGENTA_TEXT          String value used to hold magenta color output displayed to the screen during script execution.
+# *param:  string   $g_CYAN_TEXT             String value used to hold cyan color output displayed to the screen during script execution.
+# *param:  string   $g_WHITE_TEXT            String value used to hold white color output displayed to the screen during script execution.
+# *param:  string   $g_NORMAL_TEXT           String value used to hold normal color output displayed to the screen during script execution.
+# *param:  string   $g_RESET_TEXT            String value used to reset color output displayed to the screen during script execution.
+# *param:  string   $g_ALERT_TEXT            String value used to output an audible alert during script execution.
 g_RED_TEXT="" g_GREEN_TEXT="" g_YELLOW_TEXT="" g_BLUE_TEXT="" g_MAGENTA_TEXT="" g_CYAN_TEXT="" g_WHITE_TEXT="" g_NORMAL_TEXT="" g_RESET_ATTS=""  g_ALERT_TEXT=""
 if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
 	g_RED_TEXT="$(tput setaf 1)$(tput bold)"
@@ -94,24 +94,24 @@ if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
 	g_ALERT_TEXT="$(tput bel)"
 fi
 
-# *param:	string	$g_PREFIXSTRING	String value used to indicate what is appended output at the beginning of a displayed line during script execution.
+# *param:  string   $g_PREFIXSTRING          String value used to indicate what is appended output at the beginning of a displayed line during script execution.
 g_PREFIXSTRING=" *  "
 
-# *param:	string	$g_SHOWPREFIX		String value used to indicate normal script execution.
+# *param:  string   $g_SHOWPREFIX            String value used to indicate normal script execution.
 g_SHOWPREFIX="${g_GREEN_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}"
 
-# *param:	string	$g_SCRIPT_PATH		String value used to hold the execution path of the script.
+# *param:  string   $g_SCRIPT_PATH           String value used to hold the execution path of the script.
 g_SCRIPT_PATH="`dirname \"$0\"`"
 g_SCRIPT_PATH="`( cd \"$g_SCRIPT_PATH\" && pwd )`"
 
-# *param:	boolean	$g_ARG_HELP		Boolean value used to indicate the help switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_INSTALL		Boolean value used to indicate the install switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_INTR_CONF	Boolean value used to indicate the interactive configuration switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_RESTART		Boolean value used to indicate the restart daemons switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_SHOWCONF	Boolean value used to indicate the show configuration switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_VERSION		Boolean value used to indicate the version switch was passed from the command line during script execution.
-# *param:	boolean	$g_ARG_WORKSTATION	Boolean value used to indicate workstation switch was passed from the command line during script execution.
-# *param:	boolean	$v_DEBUG			Boolean value used to enable the bash debug features.
+# *param:  boolean   $g_ARG_HELP             Boolean value used to indicate the help switch was passed from the command line during script execution.
+# *param:  boolean   $g_ARG_INSTALL          Boolean value used to indicate the install switch was passed from the command line during script execution.
+# *param:  boolean   $g_ARG_INTR_CONF        Boolean value used to indicate the interactive configuration switch was passed from the command line during script execution.
+# *param:  boolean   $g_ARG_RESTART          Boolean value used to indicate the restart daemons switch was passed from the command line during script execution.
+# *param:  boolean   $g_ARG_SHOWCONF         Boolean value used to indicate the show configuration switch was passed from the command line during script execution.
+# *param:  boolean   $g_ARG_VERSION          Boolean value used to indicate the version switch was passed from the command line during script execution.
+# *param:  boolean   $g_ARG_WORKSTATION      Boolean value used to indicate workstation switch was passed from the command line during script execution.
+# *param:  boolean   $v_DEBUG                Boolean value used to enable the bash debug features.
 declare -i g_ARG_HELP=0
 declare -i g_ARG_INSTALL=0
 declare -i g_ARG_INTR_CONF=0
@@ -128,11 +128,11 @@ declare -i g_DEBUG=0
 # Usage:
 #   cleanup_and_exit_with_code $1
 #
-# *param:	boolean	$1	The passed exit code 1 (error) or 0 (normal).
+# *param:  boolean   $1                          The passed exit code 1 (error) or 0 (normal).
 #
 function cleanup_and_exit_with_code ()
 {
-	# *param:	boolean	$l_BOOL	Trap value used to test passed exit code.
+	# *param:  boolean   $l_BOOL                Trap value used to test passed exit code.
 	l_BOOL='^[0-1]+$'
 
 	if ! [[ $1 =~ $l_BOOL ]]; then
@@ -158,7 +158,7 @@ function cleanup_and_exit_with_code ()
 # Usage:
 #   info $1
 #
-# *param:	string	$1	The passed informational message.
+# *param:  string     $1                     The passed informational message.
 #
 function info ()
 {
@@ -173,7 +173,7 @@ function info ()
 # Usage:
 #   warning $1
 #
-# *param:	string	$1	The passed warning message.
+# *param:  string     $1                     The passed warning message.
 #
 function warning ()
 {
@@ -189,7 +189,7 @@ function warning ()
 # Usage:
 #   error $1
 #
-# *param:	string	$1	The passed error message.
+# *param:  string     $1                     The passed error message.
 #
 function error ()
 {
@@ -205,7 +205,7 @@ function error ()
 # conditions it encounters and what we want to do once those error conditions
 # are encountered.
 #
-# *param:	integer	$trap	A signal name with or without the SIG prefix.
+# *param:  integer    $trap                  A signal name with or without the SIG prefix.
 #
 function trap_cleanup ()
 {
@@ -224,12 +224,12 @@ trap trap_cleanup SIGHUP SIGQUIT SIGINT SIGTERM SIGKILL EXIT
 # Usage:
 #    test_yn $1
 #
-# *param:	string	$1	The passed question to test against.
-# @return	boolean		Returns 0 for yes or true and 1 for no or false.
+# *param:  string     $1                     The passed question to test against.
+# @return: boolean                           Returns 0 for yes or true and 1 for no or false.
 #
 function test_yn ()
 {
-	# *param:	string	$l_REPLY	String value used to hold the response from the keyboard.
+	# *param:  string    $l_REPLY               String value used to hold the response from the keyboard.
 	local l_REPLY=""
 
 	read -r -n 1 -p "${g_SHOWPREFIX}${1} (y/n)? ${g_ALERT_TEXT}" l_REPLY
@@ -337,14 +337,14 @@ function display_usage_message_and_bail_out ()
 # Usage:
 #   process_command_line_options ${@}
 #
-# *param:	array	${@}		An array of passed parameters from the command line.
+# *param:  array      ${@}                   An array of passed parameters from the command line.
 #
 function process_command_line_options ()
 {
-	# *param:	array	$l_TEMP	Array used to hold the list of command line arguements passed from the command line during script execution.
+	# *param:  array     $l_TEMP                Array used to hold the list of command line arguements passed from the command line during script execution.
 	local -a l_TEMP
 
-	# *param:	boolean	$l_RC	Boolean value used to test if any command line arguements passed from the command line during script execution are invalid.
+	# *param:  boolean   $l_RC                  Boolean value used to test if any command line arguements passed from the command line during script execution are invalid.
 	local -i l_RC
 
 	# Error trapping turned off, as we want to handle errors.
@@ -437,95 +437,67 @@ function configuration_file()
 		# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
 		# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
 
-		# (v_ADMIN_GROUP) - A string variable used to hold the Active Directory's
-		# Linux administrator group; the default value is Domain Admins.
+		# *param:   string  $v_ADMIN_GROUP                       The Active Directory's Linux administrator group.
 		v_ADMIN_GROUP="Domain Admins"
 
-		# (v_SERVER_OR_WORKSTATION_NAME) - A string variable used to hold the name
-		# of the target workstation or server NetBIOS name; the default value is
-		# empty.
+		# *param:   string  $v_SERVER_OR_WORKSTATION_NAME        The name of the target workstation or server NetBIOS name.
 		v_SERVER_OR_WORKSTATION_NAME=""
 
-		# (v_NETWORK_INTERFACE) - A string variable used to hold the interface name
-		# of the primary Ethernet interface; default value is empty.
+		# *param:   string  $v_NETWORK_INTERFACE                 The interface name of the primary Ethernet interface.
 		v_NETWORK_INTERFACE=""
 
-		# (v_IP_ADDRESS) - A string variable used to hold the IPv4 address of the
-		# primary Ethernet interface on the workstation or server; defult value is
-		# empty.
+		# *param:   string  $v_IP_ADDRESS                        The IPv4 address of the primary Ethernet interface on the workstation or server.
 		v_IP_ADDRESS=""
 
-		# (v_DOMAIN_NAME) - A string value used to hold the dotted notation form of the
-		# Active Directory domain; the default value is EXAMPLE.ORG.
+		# *param:   string  $v_DOMAIN_NAME                       The dotted notation form of the Active Directory domain.
 		v_DOMAIN_NAME="EXAMPLE.ORG"
 
-		# (v_SHORT_DOMAIN_NAME) - A string value used to hold the short domain name of
-		# the Active Directory domain; the default value is EXAMPLE.
+		# *param:   string  $v_SHORT_DOMAIN_NAME                 The short domain name (NetBIOS) name of the Active Directory domain.
 		v_SHORT_DOMAIN_NAME="EXAMPLE"
 
-		# (v_FQDN_AD_1) - A string variable used to hold the FQDN of the first domain
-		# controller; the default value is server1.example.org.
+		# *param:   string  $v_FQDN_AD_1                         The FQDN of the first domain controller if available.
 		v_FQDN_AD_1="server1.example.org"
 
-		# (v_FQDN_IP_1) - A string variable used to hold the IPv4 address of the first
-		# domain controller; the default value is 0.0.0.0.
+		# *param:   string  $v_FQDN_IP_1                         The IPv4 address of the first domain controller if available
 		v_FQDN_IP_1="0.0.0.0"
 
-		# (v_FQDN_AD_2) - A string variable used to hold the FQDN of the second domain
-		# controller if available; the default value is empty.
+		# *param:   string  $v_FQDN_AD_2                         The FQDN of the second domain controller if available.
 		v_FQDN_AD_2=""
 
-		# (v_FQDN_IP_2) - A string variable used to hold the IPv4 address of the second
-		# domain controller if available; the default value is empty.
+		# *param:   string  $v_FQDN_IP_2                         The IPv4 address of the second domain controller if available
 		v_FQDN_IP_2=""
 
-		# (v_TIME1) - A string variable used to hold the IPv4 address of the domain's
-		# NTP (Network Time Protocol) server; the default value is 0.0.0.0.
+		# *param:   string  $v_TIME1                             The IPv4 address of the domains first NTP server.
 		v_TIME1="0.0.0.0"
 
-		# (v_TIME2) - A string variable used to hold the IPv4 address of the domain's
-		# second NTP server or an outside NTP server; the default value is 129.6.15.28.
+		# *param:   string  $v_TIME2                             The IPv4 address of a second NTP server.
 		v_TIME2="129.6.15.28"
 
-		# (v_TIME3) - A string variable used to hold the IPv4 address of the domain's
-		# third NTP server or an outside NTP server; the default value is 129.6.15.29.
+		# *param:   string  $v_TIME3                             The IPv4 address of a third NTP server.
 		v_TIME3="129.6.15.29"
 
-		# (v_SUDO_GROUP) - A string variable used to hold the value of an Active
-		# Directory group for the Linux SUDO (Administrator) group; default value is
-		# empty.
+		# *param:   string  $v_SUDO_GROUP                        The name of the Active Directory group used to grant sudo access.
 		v_SUDO_GROUP=""
 
-		# (v_SERVER_OR_WORKSTATION_ID_STRING) - A string value used to hold the Samba
-		# identification string; the default value is Ubuntu 14.04.5.
+		# *param:   string  $v_SERVER_OR_WORKSTATION_ID_STRING   The Samba dentification string.
 		v_SERVER_OR_WORKSTATION_ID_STRING="Ubuntu 14.04.5"
 
-		# (v_LOCAL_ADMINISTRATOR) - A string value used to hold the name of the local
-		# administrator account setup during installation; the default value is
-		# empty.
+		# *param:   string  $v_LOCAL_ADMINISTRATOR               The username of a local administrator account setup that is setup during installation.
 		v_LOCAL_ADMIN=""
 
-		# (v_LOCAL_ADMIN_PASS) - A string value used to hold the password for the
-		# local administrator account setup during installation; the default value
-		# is empty.
+		# *param:   string  $v_LOCAL_ADMIN_PASS                  The password for the $v_LOCAL_ADMIN local administrator account (above).
 		v_LOCAL_ADMIN_PASS=""
 
-		# (v_VALID_DOMAIN_USER) - A string value used to hold the username of a valid
-		# domain user for testing the configuration after the domain-join; the default
-		# value is empty.
+		# *param:   string  $v_VALID_DOMAIN_USER                 The username of a valid domain user, used for testing the configuration after joining the domain.
 		v_VALID_DOMAIN_USER=""
 
-		# (v_DOM_USERNAME) - A string value used to hold the username of a valid
-		# domain administrator used to join the workstation or server to the
-		# domain; the default value is empty.
+		# *param:   string  $v_DOM_USERNAME                      The username of a validvdomain administrator.  Used to join the workstation or server to the domain.
 		v_DOM_USERNAME=""
 
-		# (v_DOM_PASSWORD) - A string value used to hold the password for the
-		# domain administrators account ehich is used to join the workstation
-		# or server to the domain; the default value is empty.
+		# *param:   string  $v_DOM_PASSWORD                      The password for the $v_DOM_USERNAME domain administrators account (above).
 		v_DOM_PASSWORD=""
 
-		# *param:	string	$v_FSTABFILE		The name of the file where you are storing the filesystem table entry changes.
+		# *param:   string  $v_FSTABFILE                         The name of the file where you are storing the filesystem table entry changes.
 		v_FSTABFILE=""
 		EOF
 
@@ -542,9 +514,9 @@ function configuration_file()
 # file and command line and configuration file snafus.
 #
 # Usage:
-#   internal_consistency_option_checks
+#   internal_consistency_checks
 #
-function internal_consistency_option_checks ()
+function internal_consistency_checks ()
 {
 	info "Internal consistency checks."
 
@@ -715,7 +687,7 @@ function backup_configuration()
 {
 	info "Backup configuration files."
 
-	# *param:	array	$l_CONF		An array used to hold the list of configuration files that the script will backup.
+	# *param:  array     $l_CONF                An array used to hold the list of configuration files that the script will backup.
 	declare -a l_CONF=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
 
 	for ((I=0;I<${#l_CONF[@]};I++)); do
@@ -741,7 +713,7 @@ function install_dependencies()
 {
 	info "Installing the packages required for Active Directory authentication."
 
-	# On Ubuntu 18.04 openssh-server and net-tools are not installed, we
+	# On Ubuntu 16.04 openssh-server and net-tools are not installed, we
 	# install them to be compatable with this script.
 	DEBIAN_FRONTEND=noninteractive apt-get --yes --force-yes install krb5-user samba sssd ntp nfs-common nfs-kernel-server openssh-server net-tools > $g_LOGFILE 2>&1
 	if [[ $? > 0 ]]; then
@@ -763,11 +735,11 @@ function install_dependencies()
 #
 function write_configuration ()
 {
-	# *param:	boolean	$l_INTFCE_FLAG		Boolean value used to indicate existing dns-search and dns-nameserver entries in interface configuration.
-	# *param:	boolean	$l_PASSWD_FLAG		Boolean value used to indicate existing nsswitch.conf configuration.
-	# *param:	boolean	$l_SUDOERS_FLAG	Boolean value used to indicate existing nsswitch.conf configuration.
-	# *param:	boolean	$l_GROUP_FLAG		Boolean value used to indicate existing nsswitch.conf configuration.
-	# *param:	boolean	$l_NETGROUP_FLAG	Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:  boolean   $l_INTFCE_FLAG         Boolean value used to indicate existing dns-search and dns-nameserver entries in interface configuration.
+	# *param:  boolean   $l_PASSWD_FLAG         Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:  boolean   $l_SUDOERS_FLAG        Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:  boolean   $l_GROUP_FLAG          Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:  boolean   $l_NETGROUP_FLAG       Boolean value used to indicate existing nsswitch.conf configuration.
 	local -i l_INTFCE_FLAG=0
 	local -i l_PASSWD_FLAG=0
 	local -i l_SUDOERS_FLAG=0
@@ -1150,7 +1122,7 @@ function daemon_restart()
 {
 	info "Restarting the daemon(s)."
 
-	# *param:	array	$l_SVC		Array used to hold the list of daemons that the script will need to restart.
+	# *param:  array     $l_SVC                 Array used to hold the list of daemons that the script will need to restart.
 	declare -a l_SVC=(ntp smbd nmbd nfs-kernel-server sssd ssh);
 
 	# Temporarially turn off error trapping for non-starting daemons.
@@ -1178,13 +1150,13 @@ function daemon_restart()
 #
 function select_interface()
 {
-	# *param:	integer	$l_TOTAL_NICS		Integer value used to indicate the number of NIC (Network Interface Cards) installed on the workstation or server.
+	# *param:  integer   $l_TOTAL_NICS          Integer value used to indicate the number of NIC (Network Interface Cards) installed on the workstation or server.
 	local -i l_TOTAL_NICS=0
 
-	# *param:	string	$l_INTERFACES		String value used to hold the names of the network interfaces.
+	# *param:  string   $l_INTERFACES           String value used to hold the names of the network interfaces.
 	local l_INTERFACES=""
 
-	# *param:	string	$l_OPTION_LIST		String value used to hold the network interface(s) selection.
+	# *param:  string   $l_OPTION_LIST          String value used to hold the network interface(s) selection.
 	local l_OPTION_LIST=""
 
 	# List all installed interfaces, filter the loopback interface then count the result.
@@ -1228,19 +1200,19 @@ function select_interface()
 # Usage:
 #   attribute $1 $2
 #
-# *param:		string	$1	Text of the attribute you are setting.
-# *param: 	string	$2	Attribute text or variable.
-# *return:	string		Value entered from keyboard.
+# *param:   string    $1                     Text of the attribute you are setting.
+# *param:   string    $2                     Attribute text or variable.
+# *return:  string                           Value entered from keyboard.
 #
 function attribute ()
 {
-	# *param:	integer	$l_NUM_ARGS	Integer value used to indicate number of arguments passed into the function.
+	# *param:  integer   $l_NUM_ARGS            Integer value used to indicate number of arguments passed into the function.
 	l_NUM_ARGS='^[1-2]+$'
 
-	# *param:	string	$l_REPLY		String used to hold the response from the keyboard.
+	# *param:  string   $l_REPLY                String used to hold the response from the keyboard.
 	local l_REPLY=""
 
-	# *param:	string	$l_ATTRIBUTE	String used to capture input response from the keyboard.
+	# *param:  string   $l_ATTRIBUTE            String used to capture input response from the keyboard.
 	local l_ATTRIBUTE=""
 
 	if ! [[ $# =~ $l_NUM_ARGS ]]; then
@@ -1287,7 +1259,7 @@ function attribute ()
 #
 function interactive_config()
 {
-	# *param:	string	$l_COLLECTION_RESPONSE	String variable used to hold the confirmation response.
+	# *param:  string    $l_COLLECTION_RESPONSE String variable used to hold the confirmation response.
 	local l_COLLECTION_RESPONSE=""
 
 	info "Interactive configuration of the scripts configuration file."
@@ -1404,7 +1376,7 @@ function interactive_config()
 #
 function show_config ()
 {
-	# *param:	array	$l_FILES		Array that holds all of the configuration files modified by this script.
+	# *param:  array     $l_FILES               Array that holds all of the configuration files modified by this script.
 	declare -a FILES=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
 
 	for ((I=0;I<${#FILES[@]};I++)); do
@@ -1430,10 +1402,10 @@ function show_config ()
 #
 function domain_join ()
 {
-	# *param:	string	$l_KTICKET			String value for holding the Kerberos ticket obtained from the domain controller.
+	# *param:  string    $l_KTICKET             String value for holding the Kerberos ticket obtained from the domain controller.
 	local l_KTICKET
 
-	# *param:	string	$l_KERBEROS_USERNAME	String value for holding the Kerberos username username@KERBEROS_REALM.
+	# *param:  string    $l_KERBEROS_USERNAME   String value for holding the Kerberos username username@KERBEROS_REALM.
 	local l_KERBEROS_USERNAME
 
 	info "Joining the workstation or server to the domain."
@@ -1589,9 +1561,9 @@ if ((g_ARG_INSTALL==1)); then
 		fstab_modify
 	fi
 	daemon_restart
+	configuration_test
 
 	echo "This workstation or server was installed on: $(date)\n" >> "${g_INSTALL_FLAG}"
 
-	configuration_test
 	cleanup_and_exit_with_code 0
 fi
