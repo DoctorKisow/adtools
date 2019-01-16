@@ -1,8 +1,10 @@
 #!/bin/bash
 #
 # A script to manage SSO (Single Sign-On) for Linux workstations and servers.
-# Version: 3.00.01
-# Copyright (c) 2014-2019 Dr. Matthew R. Kisow <matthew.kisow@nsabp.org>
+#
+# @version: 3.00.01
+# @copyright: GPL, 2014-2019
+# @author: Dr. Matthew R. Kisow <matthew.kisow@nsabp.org>
 #
 # TODO:   1. Function "check_installed" better checking required to eliminate
 #             the need for an installation flag file.
@@ -51,15 +53,15 @@ set -u
 shopt -s nullglob
 
 # ************************ global variable definitions ************************
-# *param:  string   $g_PROGNAME              String value used to hold the name of the script.
-# *param:  string   $g_CONFFILE              String value used to hold the name of the configuration file.
-# *param:  string   $g_LOGFILE               String value used to hold the name of the script log file.
-# *param:  string   $g_INSTALL_FLAG          String value used to hold the name of the flag file.
-# *param:  string   $g_VERSION               String value used to hold the version number of the script.
-# *param:  string   $g_PROGRAM_NAME          String value used to hold the proper name of the script.
-# *param:  string   $g_PROGRAM_DESCRIPTION   String value used to hold the summary description of the script.
-# *param:  string   $g_COPYRIGHT_TEXT        String value used to hold the copyright information.
-# *param:  string   $g_AUTHOR_TEXT           String value used to hold the aurhor(s) of the script.
+# *param:  string   $g_PROGNAME              Name of the script.
+# *param:  string   $g_CONFFILE              Name of the configuration file.
+# *param:  string   $g_LOGFILE               Name of the script log file.
+# *param:  string   $g_INSTALL_FLAG          Name of the installation flag file.
+# *param:  string   $g_VERSION               Script Version.
+# *param:  string   $g_PROGRAM_NAME          Script Proper Name.
+# *param:  string   $g_PROGRAM_DESCRIPTION   Script Summary Description.
+# *param:  string   $g_COPYRIGHT_TEXT        Script Copyright.
+# *param:  string   $g_AUTHOR_TEXT           Script Aurhor(s).
 declare g_PROGNAME="$(basename "${0}")"
 declare g_CONFFILE="${g_PROGNAME}.conf"
 declare g_LOGFILE="${g_PROGNAME}.log"
@@ -70,16 +72,16 @@ declare g_PROGRAM_DESCRIPTION="A script to manage SSO (Single Sign-On) for Linux
 declare g_COPYRIGHT_TEXT="Copyright (c) 2014-2019"
 declare g_AUTHOR_TEXT="Dr. Matthew R. Kisow"
 
-# *param:  string   $g_RED_TEXT              String value used to hold red color output displayed to the screen during script execution.
-# *param:  string   $g_GREEN_TEXT            String value used to hold green color output displayed to the screen during script execution.
-# *param:  string   $g_YELLOW_TEXT           String value used to hold yellow color output displayed to the screen during script execution.
-# *param:  string   $g_BLUE_TEXT             String value used to hold blue color output displayed to the screen during script execution.
-# *param:  string   $g_MAGENTA_TEXT          String value used to hold magenta color output displayed to the screen during script execution.
-# *param:  string   $g_CYAN_TEXT             String value used to hold cyan color output displayed to the screen during script execution.
-# *param:  string   $g_WHITE_TEXT            String value used to hold white color output displayed to the screen during script execution.
-# *param:  string   $g_NORMAL_TEXT           String value used to hold normal color output displayed to the screen during script execution.
-# *param:  string   $g_RESET_TEXT            String value used to reset color output displayed to the screen during script execution.
-# *param:  string   $g_ALERT_TEXT            String value used to output an audible alert during script execution.
+# *param:  string   $g_RED_TEXT              Red text color.
+# *param:  string   $g_GREEN_TEXT            Green text color.
+# *param:  string   $g_YELLOW_TEXT           Yellow text color.
+# *param:  string   $g_BLUE_TEXT             Blue text color.
+# *param:  string   $g_MAGENTA_TEXT          Magenta text color.
+# *param:  string   $g_CYAN_TEXT             Cyan text color.
+# *param:  string   $g_WHITE_TEXT            White text color.
+# *param:  string   $g_NORMAL_TEXT           Normal text color.
+# *param:  string   $g_RESET_TEXT            Reset text color.
+# *param:  string   $g_ALERT_TEXT            Audible alert text.
 g_RED_TEXT="" g_GREEN_TEXT="" g_YELLOW_TEXT="" g_BLUE_TEXT="" g_MAGENTA_TEXT="" g_CYAN_TEXT="" g_WHITE_TEXT="" g_NORMAL_TEXT="" g_RESET_ATTS=""  g_ALERT_TEXT=""
 if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
 	g_RED_TEXT="$(tput setaf 1)$(tput bold)"
@@ -94,24 +96,24 @@ if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
 	g_ALERT_TEXT="$(tput bel)"
 fi
 
-# *param:  string   $g_PREFIXSTRING          String value used to indicate what is appended output at the beginning of a displayed line during script execution.
+# *param:  string   $g_PREFIXSTRING          Prepended string output for info, warning and error text.
 g_PREFIXSTRING=" *  "
 
-# *param:  string   $g_SHOWPREFIX            String value used to indicate normal script execution.
+# *param:  string   $g_SHOWPREFIX            Normal script execution prefix output.
 g_SHOWPREFIX="${g_GREEN_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}"
 
-# *param:  string   $g_SCRIPT_PATH           String value used to hold the execution path of the script.
+# *param:  string   $g_SCRIPT_PATH           Script execution path.
 g_SCRIPT_PATH="`dirname \"$0\"`"
 g_SCRIPT_PATH="`( cd \"$g_SCRIPT_PATH\" && pwd )`"
 
-# *param:  boolean   $g_ARG_HELP             Boolean value used to indicate the help switch was passed from the command line during script execution.
-# *param:  boolean   $g_ARG_INSTALL          Boolean value used to indicate the install switch was passed from the command line during script execution.
-# *param:  boolean   $g_ARG_INTR_CONF        Boolean value used to indicate the interactive configuration switch was passed from the command line during script execution.
-# *param:  boolean   $g_ARG_RESTART          Boolean value used to indicate the restart daemons switch was passed from the command line during script execution.
-# *param:  boolean   $g_ARG_SHOWCONF         Boolean value used to indicate the show configuration switch was passed from the command line during script execution.
-# *param:  boolean   $g_ARG_VERSION          Boolean value used to indicate the version switch was passed from the command line during script execution.
-# *param:  boolean   $g_ARG_WORKSTATION      Boolean value used to indicate workstation switch was passed from the command line during script execution.
-# *param:  boolean   $v_DEBUG                Boolean value used to enable the bash debug features.
+# *param:  boolean   $g_ARG_HELP             Help switch, passed from the command line.
+# *param:  boolean   $g_ARG_INSTALL          Install switch, passed from the command line.
+# *param:  boolean   $g_ARG_INTR_CONF        Interactive configuration switch, passed from the command line.
+# *param:  boolean   $g_ARG_RESTART          Restart daemons switch, passed from the command line.
+# *param:  boolean   $g_ARG_SHOWCONF         Show configuration switch, passed from the command line.
+# *param:  boolean   $g_ARG_VERSION          Version switch, passed from the command line.
+# *param:  boolean   $g_ARG_WORKSTATION      Workstation switch, passed from the command line.
+# *param:  boolean   $v_DEBUG                Enable the bash debug features.
 declare -i g_ARG_HELP=0
 declare -i g_ARG_INSTALL=0
 declare -i g_ARG_INTR_CONF=0
@@ -128,7 +130,7 @@ declare -i g_DEBUG=0
 # Usage:
 #   cleanup_and_exit_with_code $1
 #
-# *param:  boolean   $1                          The passed exit code 1 (error) or 0 (normal).
+# *param:  boolean   $1                      The passed exit code 1 (error) or 0 (normal).
 #
 function cleanup_and_exit_with_code ()
 {
@@ -229,7 +231,7 @@ trap trap_cleanup SIGHUP SIGQUIT SIGINT SIGTERM SIGKILL EXIT
 #
 function test_yn ()
 {
-	# *param:  string    $l_REPLY               String value used to hold the response from the keyboard.
+	# *param:  string    $l_REPLY           The response requested from the keyboard.
 	local l_REPLY=""
 
 	read -r -n 1 -p "${g_SHOWPREFIX}${1} (y/n)? ${g_ALERT_TEXT}" l_REPLY
@@ -337,7 +339,7 @@ function display_usage_message_and_bail_out ()
 # Usage:
 #   process_command_line_options ${@}
 #
-# *param:  array      ${@}                   An array of passed parameters from the command line.
+# *param:  array      ${@}                   Passed parameters from the command line.
 #
 function process_command_line_options ()
 {
@@ -687,7 +689,7 @@ function backup_configuration()
 {
 	info "Backup configuration files."
 
-	# *param:  array     $l_CONF                An array used to hold the list of configuration files that the script will backup.
+	# *param:  array     $l_CONF                The list of configuration files that the script backs-up.
 	declare -a l_CONF=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
 
 	for ((I=0;I<${#l_CONF[@]};I++)); do
@@ -1122,7 +1124,7 @@ function daemon_restart()
 {
 	info "Restarting the daemon(s)."
 
-	# *param:  array     $l_SVC                 Array used to hold the list of daemons that the script will need to restart.
+	# *param:  array     $l_SVC                 The list of daemons that the script will need to restart.
 	declare -a l_SVC=(ntp smbd nmbd nfs-kernel-server sssd ssh);
 
 	# Temporarially turn off error trapping for non-starting daemons.
@@ -1206,13 +1208,13 @@ function select_interface()
 #
 function attribute ()
 {
-	# *param:  integer   $l_NUM_ARGS            Integer value used to indicate number of arguments passed into the function.
+	# *param:  integer   $l_NUM_ARGS        The number of arguments passed into the function.
 	l_NUM_ARGS='^[1-2]+$'
 
-	# *param:  string   $l_REPLY                String used to hold the response from the keyboard.
+	# *param:  string   $l_REPLY            Response from the keyboard.
 	local l_REPLY=""
 
-	# *param:  string   $l_ATTRIBUTE            String used to capture input response from the keyboard.
+	# *param:  string   $l_ATTRIBUTE        Input response from the keyboard.
 	local l_ATTRIBUTE=""
 
 	if ! [[ $# =~ $l_NUM_ARGS ]]; then
@@ -1259,7 +1261,7 @@ function attribute ()
 #
 function interactive_config()
 {
-	# *param:  string    $l_COLLECTION_RESPONSE String variable used to hold the confirmation response.
+	# *param:  string    $l_COLLECTION_RESPONSE The confirmation response.
 	local l_COLLECTION_RESPONSE=""
 
 	info "Interactive configuration of the scripts configuration file."
@@ -1376,7 +1378,7 @@ function interactive_config()
 #
 function show_config ()
 {
-	# *param:  array     $l_FILES               Array that holds all of the configuration files modified by this script.
+	# *param:  array     $l_FILES               List of the configuration files modified by this script.
 	declare -a FILES=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
 
 	for ((I=0;I<${#FILES[@]};I++)); do
@@ -1402,10 +1404,10 @@ function show_config ()
 #
 function domain_join ()
 {
-	# *param:  string    $l_KTICKET             String value for holding the Kerberos ticket obtained from the domain controller.
+	# *param:  string    $l_KTICKET             The Kerberos ticket obtained from the domain controller.
 	local l_KTICKET
 
-	# *param:  string    $l_KERBEROS_USERNAME   String value for holding the Kerberos username username@KERBEROS_REALM.
+	# *param:  string    $l_KERBEROS_USERNAME   The Kerberos username username@KERBEROS_REALM.
 	local l_KERBEROS_USERNAME
 
 	info "Joining the workstation or server to the domain."
