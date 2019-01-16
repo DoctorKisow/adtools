@@ -1515,7 +1515,7 @@ function configuration_test ()
 	fi
 }
 
-# ******************** start of script proper ********************
+# *************************** start of script proper **************************
 process_command_line_options "${@}"
 configuration_file
 internal_consistency_option_checks
