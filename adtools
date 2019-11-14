@@ -6,13 +6,9 @@
 # @copyright: GPL, 2014-2019
 # @author: Dr. Matthew R. Kisow <matthew.kisow@nsabp.org>
 #
-# TODO:   1. Function "check_installed" better checking required to eliminate
-#             the need for an installation flag file.
-#          2. Function "write_configuration" set flags when checking changes to
-#             /etc/pam.d files and write information out to post install log
-#             file.
-#          3. Function "interactive_config" test entered data for "basic" error
-#             checking.
+# TODO:   1. Function "check_installed" better checking required to eliminate the need for an installation flag file.
+#          2. Function "write_configuration" set flags when checking changes to /etc/pam.d files and write information out to post install log file.
+#          3. Function "interactive_config" test entered data for "basic" error checking.
 #          4. Function "show_config" cleanup output formatting.
 #
 # License (GPL v3.0)
@@ -33,13 +29,9 @@
 #
 
 # Variable Definition:
-#   g) (g_<variable>) - Global declaration, variables defined for use throughout
-#                       the scripts execution.
-#   l) (l_<variable>) - Local declaration, variables defined for use in
-#                       function(s), local variables cannot be accessed globally.
-#   v) (v_<variable>) - Variable declaration, variables defined in the
-#                       configuration file and are used globally throughout the
-#                       scripts execution.
+#   g) (g_<variable>) - Global declaration, variables defined for use throughout the scripts execution.
+#   l) (l_<variable>) - Local declaration, variables defined for use in function(s), local variables cannot be accessed globally.
+#   v) (v_<variable>) - Variable declaration, variables defined in the configuration file and are used globally throughout the scripts execution.
 
 # **************************** set script behavior ****************************
 # Enable exiting immediately if a command exits with a non-zero status.
@@ -48,20 +40,23 @@ set -e
 # Enable erroring on un-bound (undefined) variables.
 set -u
 
-# Enable filename patterns that match no files to expand to a null string,
-# rather than themselves.
+# Enable filename patterns that match no files to expand to a null string, rather than themselves.
 shopt -s nullglob
 
 # ************************ global variable definitions ************************
-# *param:  string   $g_PROGNAME              Name of the script.
-# *param:  string   $g_CONFFILE              Name of the configuration file.
-# *param:  string   $g_LOGFILE               Name of the script log file.
-# *param:  string   $g_INSTALL_FLAG          Name of the installation flag file.
-# *param:  string   $g_VERSION               Script Version.
-# *param:  string   $g_PROGRAM_NAME          Script Proper Name.
-# *param:  string   $g_PROGRAM_DESCRIPTION   Script Summary Description.
-# *param:  string   $g_COPYRIGHT_TEXT        Script Copyright.
-# *param:  string   $g_AUTHOR_TEXT           Script Aurhor(s).
+# *param:  string    $g_SCRIPT_PATH           Script execution path.
+g_SCRIPT_PATH="`dirname \"$0\"`"
+g_SCRIPT_PATH="`( cd \"$g_SCRIPT_PATH\" && pwd )`"
+
+# *param:  string    $g_PROGNAME             Name of the script.
+# *param:  string    $g_CONFFILE             Name of the configuration file.
+# *param:  string    $g_LOGFILE              Name of the script log file.
+# *param:  string    $g_INSTALL_FLAG         Name of the installation flag file.
+# *param:  string    $g_VERSION              Script Version.
+# *param:  string    $g_PROGRAM_NAME         Script Proper Name.
+# *param:  string    $g_PROGRAM_DESCRIPTION  Script Summary Description.
+# *param:  string    $g_COPYRIGHT_TEXT       Script Copyright.
+# *param:  string    $g_AUTHOR_TEXT          Script Aurhor(s).
 declare g_PROGNAME="$(basename "${0}")"
 declare g_CONFFILE="${g_PROGNAME}.conf"
 declare g_LOGFILE="${g_PROGNAME}.log"
@@ -72,17 +67,26 @@ declare g_PROGRAM_DESCRIPTION="A script to manage SSO (Single Sign-On) for Linux
 declare g_COPYRIGHT_TEXT="Copyright (c) 2014-2019"
 declare g_AUTHOR_TEXT="Dr. Matthew R. Kisow"
 
-# *param:  string   $g_RED_TEXT              Red text color.
-# *param:  string   $g_GREEN_TEXT            Green text color.
-# *param:  string   $g_YELLOW_TEXT           Yellow text color.
-# *param:  string   $g_BLUE_TEXT             Blue text color.
-# *param:  string   $g_MAGENTA_TEXT          Magenta text color.
-# *param:  string   $g_CYAN_TEXT             Cyan text color.
-# *param:  string   $g_WHITE_TEXT            White text color.
-# *param:  string   $g_NORMAL_TEXT           Normal text color.
-# *param:  string   $g_RESET_TEXT            Reset text color.
-# *param:  string   $g_ALERT_TEXT            Audible alert text.
-g_RED_TEXT="" g_GREEN_TEXT="" g_YELLOW_TEXT="" g_BLUE_TEXT="" g_MAGENTA_TEXT="" g_CYAN_TEXT="" g_WHITE_TEXT="" g_NORMAL_TEXT="" g_RESET_ATTS=""  g_ALERT_TEXT=""
+# *param:  string    $g_RED_TEXT             Red text color.
+# *param:  string    $g_GREEN_TEXT           Green text color.
+# *param:  string    $g_YELLOW_TEXT          Yellow text color.
+# *param:  string    $g_BLUE_TEXT            Blue text color.
+# *param:  string    $g_MAGENTA_TEXT         Magenta text color.
+# *param:  string    $g_CYAN_TEXT            Cyan text color.
+# *param:  string    $g_WHITE_TEXT           White text color.
+# *param:  string    $g_NORMAL_TEXT          Normal text color.
+# *param:  string    $g_RESET_TEXT           Reset text color.
+# *param:  string    $g_ALERT_TEXT           Audible alert text.
+declare g_RED_TEXT=""
+declare g_GREEN_TEXT=""
+declare g_YELLOW_TEXT=""
+declare g_BLUE_TEXT=""
+declare g_MAGENTA_TEXT=""
+declare g_CYAN_TEXT=""
+declare g_WHITE_TEXT=""
+declare g_NORMAL_TEXT=""
+declare g_RESET_ATTS=""
+declare g_ALERT_TEXT=""
 if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
 	g_RED_TEXT="$(tput setaf 1)$(tput bold)"
 	g_GREEN_TEXT="$(tput setaf 2)$(tput bold)"
@@ -96,15 +100,11 @@ if [[ -v TERM && -n "${TERM}" && "${TERM}" != "dumb" ]]; then
 	g_ALERT_TEXT="$(tput bel)"
 fi
 
-# *param:  string   $g_PREFIXSTRING          Prepended string output for info, warning and error text.
+# *param:  string    $g_PREFIXSTRING          Prepended string output for info, warning and error text.
 g_PREFIXSTRING=" *  "
 
-# *param:  string   $g_SHOWPREFIX            Normal script execution prefix output.
+# *param:  string    $g_SHOWPREFIX            Normal script execution prefix output.
 g_SHOWPREFIX="${g_GREEN_TEXT}${g_PREFIXSTRING}${g_RESET_ATTS}"
-
-# *param:  string   $g_SCRIPT_PATH           Script execution path.
-g_SCRIPT_PATH="`dirname \"$0\"`"
-g_SCRIPT_PATH="`( cd \"$g_SCRIPT_PATH\" && pwd )`"
 
 # *param:  boolean   $g_ARG_HELP             Help switch, passed from the command line.
 # *param:  boolean   $g_ARG_INSTALL          Install switch, passed from the command line.
@@ -160,7 +160,7 @@ function cleanup_and_exit_with_code ()
 # Usage:
 #   info $1
 #
-# *param:  string     $1                     The passed informational message.
+# *param:  string    $1                      The passed informational message.
 #
 function info ()
 {
@@ -175,7 +175,7 @@ function info ()
 # Usage:
 #   warning $1
 #
-# *param:  string     $1                     The passed warning message.
+# *param:  string    $1                      The passed warning message.
 #
 function warning ()
 {
@@ -185,13 +185,12 @@ function warning ()
 ###
 # Error Messages.
 #
-# This function will display the error message passed to it and exit the script
-# with an exit code of 1.
+# This function will display the error message passed to it and exit the script with an exit code of 1.
 #
 # Usage:
 #   error $1
 #
-# *param:  string     $1                     The passed error message.
+# *param:  string    $1                      The passed error message.
 #
 function error ()
 {
@@ -203,11 +202,9 @@ function error ()
 ###
 # Cleanup and exit the script when an error condition is encountered.
 #
-# This function used to set how we want the script to handle any error
-# conditions it encounters and what we want to do once those error conditions
-# are encountered.
+# This function used to set how we want the script to handle any error conditions it encounters and what we want to do once those error conditions are encountered.
 #
-# *param:  integer    $trap                  A signal name with or without the SIG prefix.
+# *param:  integer   $trap                   A signal name with or without the SIG prefix.
 #
 function trap_cleanup ()
 {
@@ -226,12 +223,12 @@ trap trap_cleanup SIGHUP SIGQUIT SIGINT SIGTERM SIGKILL EXIT
 # Usage:
 #    test_yn $1
 #
-# *param:  string     $1                     The passed question to test against.
+# *param:  string    $1                      The passed question to test against.
 # @return: boolean                           Returns 0 for yes or true and 1 for no or false.
 #
 function test_yn ()
 {
-	# *param:  string    $l_REPLY           The response requested from the keyboard.
+	# *param:  string    $l_REPLY                The response requested from the keyboard.
 	local l_REPLY=""
 
 	read -r -n 1 -p "${g_SHOWPREFIX}${1} (y/n)? ${g_ALERT_TEXT}" l_REPLY
@@ -285,8 +282,7 @@ function print_usage()
 ###
 # Display the scripts help and usage information.
 #
-# This function displays the scripts name and description then calls the
-# print_usage function before exiting the script with an exit code of 0.
+# This function displays the scripts name and description then calls the print_usage function before exiting the script with an exit code of 0.
 #
 # Usage:
 #   print_help
@@ -314,8 +310,7 @@ function print_version ()
 ###
 # Catch invalid command line options.
 #
-# This function is used to display the scripts usage information when an invalid
-# command line option is passed to the script.
+# This function is used to display the scripts usage information when an invalid command line option is passed to the script.
 #
 # Usage:
 #   display_usage_message_and_bail_out
@@ -333,13 +328,12 @@ function display_usage_message_and_bail_out ()
 ###
 # Process command line options.
 #
-# This function is used to set and validate the command line options that are
-# passed to the script.
+# This function is used to set and validate the command line options that are passed to the script.
 #
 # Usage:
 #   process_command_line_options ${@}
 #
-# *param:  array      ${@}                   Passed parameters from the command line.
+# *param:  array     ${@}                    Passed parameters from the command line.
 #
 function process_command_line_options ()
 {
@@ -403,8 +397,7 @@ function process_command_line_options ()
 ###
 # Display script banner.
 #
-# This function is used to display the scripts name, description and copyright
-# information.
+# This function is used to display the scripts name, description and copyright information.
 #
 # Usage:
 #   banner
@@ -419,8 +412,7 @@ function banner ()
 ###
 # Create a default configuration file.
 #
-# This function is used to create a new default configuration file or source
-# an existing configuration file.
+# This function is used to create a new default configuration file or source an existing configuration file.
 #
 # Usage:
 #   configuration_file
@@ -434,11 +426,15 @@ function configuration_file()
 	else
 		info "Creating a default configuration file."
 
-		## Create a default configuration file.
-		cat <<-EOF > "${g_SCRIPT_PATH}/${g_CONFFILE}"
-		# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+		## Create the header for the default configuration file.
+		cat <<'EOF' >> "${g_SCRIPT_PATH}/${g_CONFFILE}"
+		# ${g_PROGNAME} configuration file.
 		# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
-
+		#
+		# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
+EOF
+		## Create the default configuration file.
+		cat <<-EOF >> "${g_SCRIPT_PATH}/${g_CONFFILE}"
 		# *param:   string  $v_ADMIN_GROUP                       The Active Directory's Linux administrator group.
 		v_ADMIN_GROUP="Domain Admins"
 
@@ -501,7 +497,7 @@ function configuration_file()
 
 		# *param:   string  $v_FSTABFILE                         The name of the file where you are storing the filesystem table entry changes.
 		v_FSTABFILE=""
-		EOF
+EOF
 
 		info "  A configuration file was created at ${g_SCRIPT_PATH}/${g_CONFFILE}."
 		info "  Manually update this file or run this script again using  ${g_PROGNAME} -I"
@@ -512,8 +508,7 @@ function configuration_file()
 ###
 # Validate command line and configuration file options.
 #
-# This function used to validate the some of the more obvious configuration
-# file and command line and configuration file snafus.
+# This function used to validate the some of the more obvious configuration file and command line and configuration file snafus.
 #
 # Usage:
 #   internal_consistency_checks
@@ -652,11 +647,9 @@ function internal_consistency_checks ()
 ###
 # Check if script previously run.
 #
-# TODO: Check if the packages are already installed and interrogate
-#        configuration files to ensure the script has already been run.
+# TODO: Check if the packages are already installed and interrogate configuration files to ensure the script has already been run.
 #
-# This function is used to interrogate the installation check file if it exists
-# then display a warning.
+# This function is used to interrogate the installation check file if it exists then display a warning.
 #
 # Usage:
 #   check_installed
@@ -679,8 +672,7 @@ function check_installed()
 ###
 # Backup configuration files.
 #
-# This function is used to backup the configuration files modified during the
-# scripts execution.
+# This function is used to backup the configuration files modified during the scripts execution.
 #
 # Usage:
 #   backup_configuration
@@ -689,7 +681,7 @@ function backup_configuration()
 {
 	info "Backup configuration files."
 
-	# *param:  array     $l_CONF                The list of configuration files that the script backs-up.
+	# *param:  array     $l_CONF                 The list of configuration files that the script backs-up.
 	declare -a l_CONF=('/etc/krb5.conf' '/etc/samba/smb.conf' '/etc/ntp.conf' '/etc/pam.d/common-account' '/etc/pam.d/common-auth' '/etc/pam.d/common-password' '/etc/pam.d/common-session' '/etc/pam.d/common-session-noninteractive' '/etc/sudoers' '/etc/hosts' '/etc/network/interfaces' '/etc/nsswitch.conf' '/etc/sssd/sssd.conf' '/etc/ssh/sshd_config' '/etc/issue' '/etc/issue.net');
 
 	for ((I=0;I<${#l_CONF[@]};I++)); do
@@ -705,8 +697,7 @@ function backup_configuration()
 ###
 # Install software packages.
 #
-# This function is used to install the packages necessary for proper
-# communication with Active Directory.
+# This function is used to install the packages necessary for proper communication with Active Directory.
 #
 # Usage:
 #   install_dependencies
@@ -715,8 +706,7 @@ function install_dependencies()
 {
 	info "Installing the packages required for Active Directory authentication."
 
-	# On Ubuntu 16.04 openssh-server and net-tools are not installed, we
-	# install them to be compatable with this script.
+	# On some installations of Ubuntu 16.04 openssh-server and net-tools are not installed, we install them to be compatable with this script.
 	DEBIAN_FRONTEND=noninteractive apt-get --yes --force-yes install krb5-user samba sssd ntp nfs-common nfs-kernel-server openssh-server net-tools > $g_LOGFILE 2>&1
 	if [[ $? > 0 ]]; then
 		error "  An error occured while installing one of the dependent packages."
@@ -726,22 +716,20 @@ function install_dependencies()
 ###
 # Write or modify configuration files.
 #
-# TODO: Set flags for each /etc/pam.d file then warn and write out to log file
-#        with a list of possible fixes.
+# TODO: Set flags for each /etc/pam.d file then warn and write out to log file with a list of possible fixes.
 #
-# This function is used to write or modify the configuration files needed to
-# configure SSO access to an Active Directory domain.
+# This function is used to write or modify the configuration files needed to configure SSO access to an Active Directory domain.
 #
 # Usage:
 #   write_configuration
 #
 function write_configuration ()
 {
-	# *param:  boolean   $l_INTFCE_FLAG         Boolean value used to indicate existing dns-search and dns-nameserver entries in interface configuration.
-	# *param:  boolean   $l_PASSWD_FLAG         Boolean value used to indicate existing nsswitch.conf configuration.
-	# *param:  boolean   $l_SUDOERS_FLAG        Boolean value used to indicate existing nsswitch.conf configuration.
-	# *param:  boolean   $l_GROUP_FLAG          Boolean value used to indicate existing nsswitch.conf configuration.
-	# *param:  boolean   $l_NETGROUP_FLAG       Boolean value used to indicate existing nsswitch.conf configuration.
+	# *param:  boolean   $l_INTFCE_FLAG         Test the existing dns-search and dns-nameserver entries in interface configuration.
+	# *param:  boolean   $l_PASSWD_FLAG         Test the existing nsswitch.conf configuration.
+	# *param:  boolean   $l_SUDOERS_FLAG        Test the existing nsswitch.conf configuration.
+	# *param:  boolean   $l_GROUP_FLAG          Test the existing nsswitch.conf configuration.
+	# *param:  boolean   $l_NETGROUP_FLAG       Test the existing nsswitch.conf configuration.
 	local -i l_INTFCE_FLAG=0
 	local -i l_PASSWD_FLAG=0
 	local -i l_SUDOERS_FLAG=0
@@ -1114,8 +1102,7 @@ function write_configuration ()
 ###
 # Restart daemons.
 #
-# This function is used to restart the daemons that are necessary for SSO to
-# properly communicate and leverage Active Directory for security.
+# This function is used to restart the daemons that are necessary for SSO to properly communicate and leverage Active Directory for security.
 #
 # Usage:
 #   daemon_restart
@@ -1144,8 +1131,7 @@ function daemon_restart()
 ###
 # Select the network interface.
 #
-# This function is used to automatically select or list and have the script
-# operator choose a network interface.
+# This function is used to automatically select or list and have the script operator choose a network interface.
 #
 # Usage:
 #   select_interface
@@ -1175,8 +1161,7 @@ function select_interface()
 
 			read -r -p "  Select an interface from the list shown above: " l_OPTION_LIST
 
-			# The selection MUST be numeric, greater than or equal to 0 and less than or equal to the total
-			# number of enumerated interfaces minus one (interface numbers are assigned starting at zero).
+			# The selection MUST be numeric, greater than or equal to 0 and less than or equal to the totalcnumber of enumerated interfaces minus one (interface numbers are assigned starting at zero).
 			if [[ $l_OPTION_LIST =~ ^[0-9]$ ]] && (( ($l_OPTION_LIST >= 0) && ($l_OPTION_LIST <= $((${#l_INTERFACES[@]}-1))) )); then
 				printf "  You selected interface \"${l_INTERFACES[$l_OPTION_LIST]}\".\n"
 				l_NETWORK_INTERFACE="${l_INTERFACES[$l_OPTION_LIST]}"
@@ -1196,8 +1181,7 @@ function select_interface()
 ###
 # Format and capture the elements from the configuration file.
 #
-# This function is used to format the display of attributes from the configuration
-# file during an interactive setup.
+# This function is used to format the display of attributes from the configuration file during an interactive setup.
 #
 # Usage:
 #   attribute $1 $2
@@ -1253,8 +1237,7 @@ function attribute ()
 # TODO: RegEx String Validation.
 #        Check for account collision for local admin account.
 #
-# This function is used to collect workstation or server specific
-# information from the script operator and update the configuration file.
+# This function is used to collect workstation or server specific information from the script operator and update the configuration file.
 #
 # Usage:
 #   interactive_config
@@ -1396,8 +1379,7 @@ function show_config ()
 ###
 # Join Active Directory Domain
 #
-# This function is used to gather the credentials and join the workstation or
-# server to the Active Directory domain as a member.
+# This function is used to gather the credentials and join the workstation or server to the Active Directory domain as a member.
 #
 # Usage:
 #   domain_join
@@ -1497,8 +1479,7 @@ function fstab_modify ()
 ###
 # Test configuration.
 #
-# This function is used to validate a successful domain-join by testing it
-# against a valid test user.
+# This function is used to validate a successful domain-join by testing it against a valid test user.
 #
 # Usage:
 #   configuration_test
