@@ -427,14 +427,14 @@ function configuration_file()
 		info "Creating a default configuration file."
 
 		## Create the header for the default configuration file.
-		cat <<'EOF' >> "${g_SCRIPT_PATH}/${g_CONFFILE}"
+		cat <<-EOF >> "${g_SCRIPT_PATH}/${g_CONFFILE}"
 		# ${g_PROGNAME} configuration file.
 		# ${g_COPYRIGHT_TEXT}, ${g_AUTHOR_TEXT}
 		#
 		# This file was generated on $(date +"%d-%^b-%Y") by ${0##*/}.
 EOF
 		## Create the default configuration file.
-		cat <<-EOF >> "${g_SCRIPT_PATH}/${g_CONFFILE}"
+		cat <<'EOF' >> "${g_SCRIPT_PATH}/${g_CONFFILE}"
 		# *param:   string  $v_ADMIN_GROUP                       The Active Directory's Linux administrator group.
 		v_ADMIN_GROUP="Domain Admins"
 
