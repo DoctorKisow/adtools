@@ -1501,7 +1501,6 @@ function configuration_test ()
 # *************************** start of script proper **************************
 process_command_line_options "${@}"
 configuration_file
-internal_consistency_option_checks
 
 # Process one-off options and exit.
 if ((g_ARG_HELP==1)); then
