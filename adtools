@@ -1251,7 +1251,7 @@ function interactive_config()
 
 	until [[ $l_COLLECTION_RESPONSE =~ ^[Y|y]$ ]]; do
 		# Domain Administrators Group.
-		v_ADMIN_GROUP=$( attribute "name of the domain administrators group" "${v_ADMIN_GROUP}" )
+		$v_ADMIN_GROUP=$( attribute "name of the domain administrators group" "${v_ADMIN_GROUP}" )
 		sed -i "s/v_ADMIN_GROUP=\"[^\"]*\"/v_ADMIN_GROUP=\"${v_ADMIN_GROUP}\"/" "${g_SCRIPT_PATH}/${g_CONFFILE}"
 
 		# Workstation or Server NETBIOS Name.
